@@ -19,9 +19,12 @@ export const AccountNav: React.FC<Props> = ({ className }) => {
           <Button asChild variant="link">
             <Link
               href="/account"
-              className={clsx('text-primary/50 hover:text-primary hover:no-underline', {
-                'text-primary': pathname === '/account',
-              })}
+              className={clsx(
+                'text-[var(--color-text-secondary)] hover:text-[var(--color-cta-accent)] hover:no-underline',
+                {
+                  'text-[var(--color-text-primary)]': pathname === '/account',
+                },
+              )}
             >
               Account settings
             </Link>
@@ -32,9 +35,12 @@ export const AccountNav: React.FC<Props> = ({ className }) => {
           <Button asChild variant="link">
             <Link
               href="/account/addresses"
-              className={clsx('text-primary/50 hover:text-primary hover:no-underline', {
-                'text-primary': pathname === '/account/addresses',
-              })}
+              className={clsx(
+                'text-[var(--color-text-secondary)] hover:text-[var(--color-cta-accent)] hover:no-underline',
+                {
+                  'text-[var(--color-text-primary)]': pathname === '/account/addresses',
+                },
+              )}
             >
               Addresses
             </Link>
@@ -45,23 +51,30 @@ export const AccountNav: React.FC<Props> = ({ className }) => {
           <Button
             asChild
             variant="link"
-            className={clsx('text-primary/50 hover:text-primary hover:no-underline', {
-              'text-primary': pathname === '/orders' || pathname.includes('/orders'),
-            })}
+            className={clsx(
+              'text-[var(--color-text-secondary)] hover:text-[var(--color-cta-accent)] hover:no-underline',
+              {
+                'text-[var(--color-text-primary)]':
+                  pathname === '/orders' || pathname.includes('/orders'),
+              },
+            )}
           >
             <Link href="/orders">Orders</Link>
           </Button>
         </li>
       </ul>
 
-      <hr className="w-full border-white/5" />
+      <hr className="w-full border-[var(--color-border-subtle)]" />
 
       <Button
         asChild
         variant="link"
-        className={clsx('text-primary/50 hover:text-primary hover:no-underline', {
-          'text-primary': pathname === '/logout',
-        })}
+        className={clsx(
+          'text-[var(--color-text-secondary)] hover:text-[var(--color-cta-accent)] hover:no-underline',
+          {
+            'text-[var(--color-text-primary)]': pathname === '/logout',
+          },
+        )}
       >
         <Link href="/logout">Log out</Link>
       </Button>

@@ -1,6 +1,7 @@
 import { Grid } from '@/components/Grid'
 import { ProductGridItem } from '@/components/ProductGridItem'
 import configPromise from '@payload-config'
+import type { Where } from 'payload'
 import { getPayload } from 'payload'
 import React from 'react'
 
@@ -15,63 +16,123 @@ type Props = {
   searchParams: Promise<SearchParams>
 }
 
-export default async function ShopPage({ searchParams }: Props) {
-  const { q: searchValue, sort, category } = await searchParams
-  const payload = await getPayload({ config: configPromise })
+const validSorts = new Set(['title', '-createdAt', 'priceInPKR', '-priceInPKR'])
 
-  const products = await payload.find({
-    collection: 'products',
-    draft: false,
-    overrideAccess: false,
-    select: {
-      title: true,
-      slug: true,
-      gallery: true,
-      categories: true,
-      priceInUSD: true,
-    },
-    ...(sort ? { sort } : { sort: 'title' }),
-    ...(searchValue || category
-      ? {
-          where: {
-            and: [
-              {
-                _status: {
-                  equals: 'published',
-                },
-              },
-              ...(searchValue
-                ? [
-                    {
-                      or: [
-                        {
-                          title: {
-                            like: searchValue,
-                          },
-                        },
-                        {
-                          description: {
-                            like: searchValue,
-                          },
-                        },
-                      ],
-                    },
-                  ]
-                : []),
-              ...(category
-                ? [
-                    {
-                      categories: {
-                        contains: category,
-                      },
-                    },
-                  ]
-                : []),
-            ],
+const getFirstParam = (value: string | string[] | undefined) => {
+  if (Array.isArray(value)) return value[0]
+  return value
+}
+
+const normalizeSearchParam = (value: string | string[] | undefined, maxLength = 80) => {
+  const firstValue = getFirstParam(value)?.trim()
+
+  if (!firstValue) return undefined
+
+  return firstValue.slice(0, maxLength)
+}
+
+const getSortValue = (value: string | string[] | undefined) => {
+  const sortValue = normalizeSearchParam(value, 32)
+
+  if (sortValue === 'latest') return '-createdAt'
+
+  return sortValue && validSorts.has(sortValue) ? sortValue : 'title'
+}
+
+export default async function ShopPage({ searchParams }: Props) {
+  const { q, sort, category } = await searchParams
+  const searchValue = normalizeSearchParam(q)
+  const categoryParam = normalizeSearchParam(category, 64)
+  const sortValue = getSortValue(sort)
+  const payload = await getPayload({ config: configPromise })
+  let categoryID: number | undefined
+
+  if (categoryParam) {
+    if (/^\d+$/.test(categoryParam)) {
+      categoryID = Number(categoryParam)
+    } else {
+      const categories = await payload.find({
+        collection: 'categories',
+        depth: 0,
+        limit: 1,
+        overrideAccess: false,
+        pagination: false,
+        where: {
+          slug: {
+            equals: categoryParam,
           },
-        }
-      : {}),
-  })
+        },
+      })
+
+      categoryID = categories.docs[0]?.id
+    }
+  }
+
+  const hasUnresolvedCategory = Boolean(categoryParam && typeof categoryID !== 'number')
+
+  const where: Where = {
+    and: [
+      {
+        _status: {
+          equals: 'published',
+        },
+      },
+      ...(searchValue
+        ? [
+            {
+              or: [
+                {
+                  title: {
+                    like: searchValue,
+                  },
+                },
+                {
+                  description: {
+                    like: searchValue,
+                  },
+                },
+              ],
+            },
+          ]
+        : []),
+      ...(typeof categoryID === 'number'
+        ? [
+            {
+              categories: {
+                contains: categoryID,
+              },
+            },
+          ]
+        : []),
+    ],
+  }
+
+  const products = hasUnresolvedCategory
+    ? { docs: [] }
+    : await payload.find({
+        collection: 'products',
+        depth: 1,
+        draft: false,
+        limit: 48,
+        overrideAccess: false,
+        select: {
+          title: true,
+          slug: true,
+          gallery: true,
+          categories: true,
+          priceInPKR: true,
+          priceTag: true,
+          discountPercent: true,
+          variants: true,
+        },
+        sort: sortValue,
+        where,
+        populate: {
+          variants: {
+            priceInPKR: true,
+          },
+        },
+      })
 
   const resultsText = products.docs.length > 1 ? 'results' : 'result'
 

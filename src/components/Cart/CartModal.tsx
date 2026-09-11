@@ -21,6 +21,7 @@ import { EditItemQuantityButton } from './EditItemQuantityButton'
 import { OpenCartButton } from './OpenCart'
 import { Button } from '@/components/ui/button'
 import { Product } from '@/payload-types'
+import { getOptionLabel, getRelationshipID } from '@/utilities/variantOptions'
 
 export function CartModal() {
   const { cart } = useCart()
@@ -29,8 +30,11 @@ export function CartModal() {
   const pathname = usePathname()
 
   useEffect(() => {
-    // Close the cart modal when the pathname changes.
-    setIsOpen(false)
+    const frame = window.requestAnimationFrame(() => {
+      setIsOpen(false)
+    })
+
+    return () => window.cancelAnimationFrame(frame)
   }, [pathname])
 
   const totalQuantity = useMemo(() => {
@@ -78,27 +82,25 @@ export function CartModal() {
                       : undefined
 
                   let image = firstGalleryImage || metaImage
-                  let price = product.priceInUSD
+                  let price = product.priceInPKR
 
                   const isVariant = Boolean(variant) && typeof variant === 'object'
 
                   if (isVariant) {
-                    price = variant?.priceInUSD
+                    price = variant?.priceInPKR
 
-                    const imageVariant = product.gallery?.find((item) => {
-                      if (!item.variantOption) return false
-                      const variantOptionID =
-                        typeof item.variantOption === 'object'
-                          ? item.variantOption.id
-                          : item.variantOption
+                    const imageVariant = product.gallery?.find(
+                      (item: { variantOption?: unknown }) => {
+                        if (!item.variantOption) return false
+                        const variantOptionID = getRelationshipID(item.variantOption)
 
-                      const hasMatch = variant?.options?.some((option) => {
-                        if (typeof option === 'object') return option.id === variantOptionID
-                        else return option === variantOptionID
-                      })
+                        const hasMatch = variant?.options?.some((option: unknown) => {
+                          return getRelationshipID(option) === variantOptionID
+                        })
 
-                      return hasMatch
-                    })
+                        return hasMatch
+                      },
+                    )
 
                     if (imageVariant && typeof imageVariant.image === 'object') {
                       image = imageVariant.image
@@ -115,7 +117,7 @@ export function CartModal() {
                           className="z-30 flex flex-row space-x-4"
                           href={`/products/${(item.product as Product)?.slug}`}
                         >
-                          <div className="relative h-16 w-16 cursor-pointer overflow-hidden rounded-md border border-neutral-300 bg-neutral-300 dark:border-neutral-700 dark:bg-neutral-900 dark:hover:bg-neutral-800">
+                          <div className="relative h-16 w-16 cursor-pointer overflow-hidden rounded-md border border-[var(--color-border-subtle)] bg-[var(--color-surface-secondary)]">
                             {image?.url && (
                               <Image
                                 alt={image?.alt || product?.title || ''}
@@ -130,12 +132,9 @@ export function CartModal() {
                           <div className="flex flex-1 flex-col text-base">
                             <span className="leading-tight">{product?.title}</span>
                             {isVariant && variant ? (
-                              <p className="text-sm text-neutral-500 dark:text-neutral-400 capitalize">
+                              <p className="text-sm capitalize text-[var(--color-text-secondary)]">
                                 {variant.options
-                                  ?.map((option) => {
-                                    if (typeof option === 'object') return option.label
-                                    return null
-                                  })
+                                  ?.map((option: unknown) => getOptionLabel(option))
                                   .join(', ')}
                               </p>
                             ) : null}
@@ -163,13 +162,13 @@ export function CartModal() {
               </ul>
 
               <div className="px-4">
-                <div className="py-4 text-sm text-neutral-500 dark:text-neutral-400">
+                <div className="py-4 text-sm text-[var(--color-text-secondary)]">
                   {typeof cart?.subtotal === 'number' && (
-                    <div className="mb-3 flex items-center justify-between border-b border-neutral-200 pb-1 pt-1 dark:border-neutral-700">
+                    <div className="mb-3 flex items-center justify-between border-b border-[var(--color-border-subtle)] pb-1 pt-1">
                       <p>Total</p>
                       <Price
                         amount={cart?.subtotal}
-                        className="text-right text-base text-black dark:text-white"
+                        className="text-right text-base text-[var(--color-text-primary)]"
                       />
                     </div>
                   )}

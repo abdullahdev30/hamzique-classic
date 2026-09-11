@@ -1,9 +1,9 @@
 import type { Media, Product } from '@/payload-types'
 
 import { RenderBlocks } from '@/blocks/RenderBlocks'
-import { GridTileImage } from '@/components/Grid/tile'
 import { Gallery } from '@/components/product/Gallery'
 import { ProductDescription } from '@/components/product/ProductDescription'
+import { ProductGridItem } from '@/components/ProductGridItem'
 import configPromise from '@payload-config'
 import { getPayload } from 'payload'
 import { draftMode } from 'next/headers'
@@ -13,6 +13,7 @@ import React, { Suspense } from 'react'
 import { Button } from '@/components/ui/button'
 import { ChevronLeftIcon } from 'lucide-react'
 import { Metadata } from 'next'
+import { getDeliveryWindow } from '@/utilities/deliveryDates'
 
 type Args = {
   params: Promise<{
@@ -81,12 +82,12 @@ export default async function ProductPage({ params }: Args) {
       })
     : product.inventory! > 0
 
-  let price = product.priceInUSD
+  let price = product.priceInPKR
 
   if (product.enableVariants && product?.variants?.docs?.length) {
     price = product?.variants?.docs?.reduce((acc, variant) => {
-      if (typeof variant === 'object' && variant?.priceInUSD && acc && variant?.priceInUSD > acc) {
-        return variant.priceInUSD
+      if (typeof variant === 'object' && variant?.priceInPKR && acc && variant?.priceInPKR > acc) {
+        return variant.priceInPKR
       }
       return acc
     }, price)
@@ -96,7 +97,7 @@ export default async function ProductPage({ params }: Args) {
     name: product.title,
     '@context': 'https://schema.org',
     '@type': 'Product',
-    description: product.description,
+    description: product.meta?.description || product.title,
     image: metaImage?.url,
     offers: {
       '@type': 'AggregateOffer',
@@ -108,12 +109,13 @@ export default async function ProductPage({ params }: Args) {
 
   const relatedProducts =
     product.relatedProducts?.filter((relatedProduct) => typeof relatedProduct === 'object') ?? []
+  const deliveryWindow = getDeliveryWindow()
 
   return (
     <React.Fragment>
       <script
         dangerouslySetInnerHTML={{
-          __html: JSON.stringify(productJsonLd),
+          __html: JSON.stringify(productJsonLd).replace(/</g, '\\u003c'),
         }}
         type="application/ld+json"
       />
@@ -136,7 +138,7 @@ export default async function ProductPage({ params }: Args) {
           </div>
 
           <div className="basis-full lg:basis-1/2">
-            <ProductDescription product={product} />
+            <ProductDescription deliveryWindow={deliveryWindow} product={product} />
           </div>
         </div>
       </div>
@@ -163,18 +165,10 @@ function RelatedProducts({ products }: { products: Product[] }) {
       <ul className="flex w-full gap-4 overflow-x-auto pt-1">
         {products.map((product) => (
           <li
-            className="aspect-square w-full flex-none min-[475px]:w-1/2 sm:w-1/3 md:w-1/4 lg:w-1/5"
+            className="w-full flex-none min-[475px]:w-1/2 sm:w-1/3 md:w-1/4 lg:w-1/5"
             key={product.id}
           >
-            <Link className="relative h-full w-full" href={`/products/${product.slug}`}>
-              <GridTileImage
-                label={{
-                  amount: product.priceInUSD!,
-                  title: product.title,
-                }}
-                media={product.meta?.image as Media}
-              />
-            </Link>
+            <ProductGridItem product={product} />
           </li>
         ))}
       </ul>
@@ -207,7 +201,7 @@ const queryProductBySlug = async ({ slug }: { slug: string }) => {
     populate: {
       variants: {
         title: true,
-        priceInUSD: true,
+        priceInPKR: true,
         inventory: true,
         options: true,
       },

@@ -1,5 +1,6 @@
 import type { Metadata } from 'next'
 
+import { CategoryProductSection } from '@/components/CategoryProductSection'
 import { RenderBlocks } from '@/blocks/RenderBlocks'
 import { RenderHero } from '@/heros/RenderHero'
 import { generateMeta } from '@/utilities/generateMeta'
@@ -40,11 +41,25 @@ type Args = {
   params: Promise<{
     slug?: string
   }>
+  searchParams?: Promise<{
+    category?: string | string[]
+  }>
 }
 
-export default async function Page({ params }: Args) {
+const getFirstParam = (value?: string | string[]) => {
+  if (Array.isArray(value)) return value[0]
+  return value
+}
+
+const normalizeCategoryParam = (value?: string | string[]) => {
+  const category = getFirstParam(value)?.trim()
+
+  return category ? category.slice(0, 64) : undefined
+}
+
+export default async function Page({ params, searchParams }: Args) {
   const { slug = 'home' } = await params
-  const url = '/' + slug
+  const selectedCategory = normalizeCategoryParam((await searchParams)?.category)
 
   let page = await queryPageBySlug({
     slug,
@@ -62,9 +77,10 @@ export default async function Page({ params }: Args) {
   const { hero, layout } = page
 
   return (
-    <article className="pt-16 pb-24">
+    <article>
       <RenderHero {...hero} />
       <RenderBlocks blocks={layout} />
+      <CategoryProductSection page={page} selectedCategory={selectedCategory} />
     </article>
   )
 }

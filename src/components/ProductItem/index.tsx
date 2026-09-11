@@ -1,9 +1,6 @@
 import { Media } from '@/components/Media'
-import { OrderStatus } from '@/components/OrderStatus'
 import { Price } from '@/components/Price'
-import { Button } from '@/components/ui/button'
-import { Media as MediaType, Order, Product, Variant } from '@/payload-types'
-import { formatDateTime } from '@/utilities/formatDateTime'
+import { Product, Variant } from '@/payload-types'
 import Link from 'next/link'
 
 type Props = {
@@ -55,7 +52,7 @@ export const ProductItem: React.FC<Props> = ({
     }
   }
 
-  const itemPrice = variant?.priceInUSD || product.priceInUSD
+  const itemPrice = variant?.priceInPKR || product.priceInPKR
   const itemURL = `/products/${product.slug}${variant ? `?variant=${variant.id}` : ''}`
 
   return (
@@ -73,7 +70,7 @@ export const ProductItem: React.FC<Props> = ({
             <Link href={itemURL}>{title}</Link>
           </p>
           {variant && (
-            <p className="text-sm font-mono text-primary/50 tracking-widest">
+            <p className="font-accent text-sm tracking-widest text-[var(--color-text-secondary)]">
               {variant.options
                 ?.map((option) => {
                   if (typeof option === 'object') return option.label
@@ -92,7 +89,7 @@ export const ProductItem: React.FC<Props> = ({
           <div className="text-right">
             <p className="font-medium text-lg">Subtotal</p>
             <Price
-              className="font-mono text-primary/50 text-sm"
+              className="font-accent text-sm text-[var(--color-text-secondary)]"
               amount={itemPrice * quantity}
               currencyCode={currencyCode}
             />

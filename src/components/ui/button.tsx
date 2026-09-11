@@ -11,14 +11,14 @@ const buttonVariants = cva(
       variant: {
         default: 'bg-primary text-primary-foreground shadow-xs hover:bg-primary/90 ',
         destructive:
-          'bg-destructive text-white shadow-xs hover:bg-destructive/90 focus-visible:ring-destructive/20 dark:focus-visible:ring-destructive/40',
+          'bg-destructive text-destructive-foreground shadow-xs hover:bg-destructive/90 focus-visible:ring-destructive/20 dark:focus-visible:ring-destructive/40',
         outline:
-          'border border-input bg-card shadow-xs hover:bg-accent hover:bg-primary-foreground',
+          'border border-input bg-card text-foreground shadow-xs hover:bg-accent hover:text-accent-foreground',
         secondary: 'bg-secondary text-secondary-foreground shadow-xs hover:bg-secondary/80',
         ghost:
-          'text-primary/50 hover:text-primary [&.active]:text-primary py-2 px-4 uppercase font-mono tracking-widest text-xs',
+          'text-[var(--color-text-secondary)] hover:text-[var(--color-cta-accent)] [&.active]:text-[var(--color-text-primary)] py-2 px-4 uppercase font-accent text-xs font-semibold',
         link: 'text-primary underline-offset-4 hover:underline',
-        nav: 'text-primary/50 hover:text-primary [&.active]:text-primary p-0 pt-2 pb-6 uppercase font-mono tracking-widest text-xs',
+        nav: 'text-[var(--color-text-secondary)] hover:text-[var(--color-cta-accent)] [&.active]:text-[var(--color-text-primary)] p-0 uppercase font-accent text-xs font-semibold',
       },
       size: {
         clear: '',

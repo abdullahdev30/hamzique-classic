@@ -2,6 +2,8 @@ import type { CollectionConfig } from 'payload'
 
 import { Banner } from '@/blocks/Banner/config'
 import { Carousel } from '@/blocks/Carousel/config'
+import { FAQ } from '@/blocks/FAQ/config'
+import { HeroCarousel } from '@/blocks/HeroCarousel/config'
 import { ThreeItemGrid } from '@/blocks/ThreeItemGrid/config'
 import { generatePreviewPath } from '@/utilities/generatePreviewPath'
 import { adminOnly } from '@/access/adminOnly'
@@ -76,6 +78,37 @@ export const Pages: CollectionConfig = {
       },
     },
     {
+      name: 'showInNavigation',
+      type: 'checkbox',
+      admin: {
+        description: 'Show this page as a top-level storefront navigation item.',
+        position: 'sidebar',
+      },
+      defaultValue: true,
+      label: 'Show in navigation',
+    },
+    {
+      name: 'navigationLabel',
+      type: 'text',
+      admin: {
+        condition: (_, siblingData) => siblingData.showInNavigation === true,
+        description: 'Optional short label for the navbar. Falls back to the page title.',
+        position: 'sidebar',
+      },
+      label: 'Navigation label',
+    },
+    {
+      name: 'navigationOrder',
+      type: 'number',
+      admin: {
+        condition: (_, siblingData) => siblingData.showInNavigation === true,
+        position: 'sidebar',
+        step: 1,
+      },
+      defaultValue: 50,
+      label: 'Navigation order',
+    },
+    {
       type: 'tabs',
       tabs: [
         {
@@ -88,6 +121,8 @@ export const Pages: CollectionConfig = {
               name: 'layout',
               type: 'blocks',
               blocks: [
+                HeroCarousel,
+                FAQ,
                 CallToAction,
                 Content,
                 MediaBlock,

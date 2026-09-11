@@ -122,7 +122,7 @@ test.describe('Frontend', () => {
 
     const priceSort = page.getByText('Price: Low to high')
     await priceSort.click()
-    await expect(page).toHaveURL(/\/search\?sort=priceInUSD/)
+    await expect(page).toHaveURL(/\/search\?sort=priceInPKR/)
 
     await expect(title).toHaveText('Hoodie')
   })
@@ -463,8 +463,8 @@ test.describe('Frontend', () => {
         _status: 'published',
         layout: [],
         gallery: [imageID],
-        priceInUSDEnabled: true,
-        priceInUSD: 1000,
+        priceInPKREnabled: true,
+        priceInPKR: 1000,
       },
     })
 
@@ -475,8 +475,8 @@ test.describe('Frontend', () => {
         product: productID,
         variantType: variantTypeID,
         options: [payloadVariantID],
-        priceInUSDEnabled: true,
-        priceInUSD: 1000,
+        priceInPKREnabled: true,
+        priceInPKR: 1000,
         inventory: 50,
         _status: 'published',
       },
@@ -487,8 +487,8 @@ test.describe('Frontend', () => {
         product: productID,
         variantType: variantTypeID,
         options: [figmaVariantID],
-        priceInUSDEnabled: true,
-        priceInUSD: 1000,
+        priceInPKREnabled: true,
+        priceInPKR: 1000,
         inventory: 50,
         _status: 'published',
       },
@@ -502,8 +502,8 @@ test.describe('Frontend', () => {
         _status: 'published',
         layout: [],
         gallery: [imageID],
-        priceInUSDEnabled: true,
-        priceInUSD: 1000,
+        priceInPKREnabled: true,
+        priceInPKR: 1000,
       },
     })
 
@@ -515,8 +515,8 @@ test.describe('Frontend', () => {
         _status: 'published',
         layout: [],
         gallery: [imageID],
-        priceInUSDEnabled: true,
-        priceInUSD: 1000,
+        priceInPKREnabled: true,
+        priceInPKR: 1000,
       },
     })
   }
@@ -595,6 +595,8 @@ test.describe('Frontend', () => {
     },
     guestEmail?: string | null,
   ): Promise<void> {
+    void paymentDetails
+
     await page.goto(`${baseURL}/checkout`)
 
     if (guestEmail) {
@@ -608,17 +610,10 @@ test.describe('Frontend', () => {
     const confirmAddress = page.getByRole('button', { name: 'Confirm address' })
     await confirmAddress.click()
 
-    const { cardNumber, expiryDate, cvc, postcode } = paymentDetails
-
-    const stripeIframe = page.frameLocator('iframe[title="Secure payment input frame"]')
-
-    await stripeIframe.locator('#Field-numberInput').fill(cardNumber)
-    await stripeIframe.locator('#Field-expiryInput').fill(expiryDate)
-    await stripeIframe.locator('#Field-cvcInput').fill(cvc)
-    await stripeIframe.locator('#Field-postalCodeInput').fill(postcode)
-
-    const payNowButton = page.getByRole('button', { name: 'Pay now' })
-    await payNowButton.click()
+    const placeOrderButton = page.getByRole('button', {
+      name: /place cash on delivery order/i,
+    })
+    await placeOrderButton.click()
 
     await page.waitForURL(/\/orders/)
     await expect(page).toHaveURL(/\/orders/)

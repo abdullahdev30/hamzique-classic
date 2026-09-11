@@ -27,8 +27,6 @@ const collections: CollectionSlug[] = [
   'orders',
 ]
 
-const categories = ['Accessories', 'T-Shirts', 'Hats']
-
 const sizeVariantOptions = [
   { label: 'Small', value: 'small' },
   { label: 'Medium', value: 'medium' },
@@ -43,29 +41,30 @@ const colorVariantOptions = [
 
 const globals: GlobalSlug[] = ['header', 'footer']
 
-const baseAddressUSData: Transaction['billingAddress'] = {
-  title: 'Dr.',
-  firstName: 'Otto',
-  lastName: 'Octavius',
-  phone: '1234567890',
-  company: 'Oscorp',
-  addressLine1: '123 Main St',
-  addressLine2: 'Suite 100',
-  city: 'New York',
-  state: 'NY',
-  postalCode: '10001',
-  country: 'US',
+const baseAddressPakistanData: Transaction['billingAddress'] = {
+  title: 'Mr.',
+  firstName: 'Ali',
+  lastName: 'Khan',
+  phone: '+923001234567',
+  company: 'Store Customer',
+  addressLine1: '12 Mall Road',
+  addressLine2: 'Gulberg',
+  city: 'Lahore',
+  state: 'Punjab',
+  postalCode: '54000',
+  country: 'PK',
 }
 
-const baseAddressUKData: Transaction['billingAddress'] = {
-  title: 'Mr.',
-  firstName: 'Oliver',
-  lastName: 'Twist',
-  phone: '1234567890',
-  addressLine1: '48 Great Portland St',
-  city: 'London',
-  postalCode: 'W1W 7ND',
-  country: 'GB',
+const secondaryAddressPakistanData: Transaction['billingAddress'] = {
+  title: 'Ms.',
+  firstName: 'Ayesha',
+  lastName: 'Malik',
+  phone: '+923331234567',
+  addressLine1: '45 Clifton Block 5',
+  city: 'Karachi',
+  state: 'Sindh',
+  postalCode: '75600',
+  country: 'PK',
 }
 
 // Next.js revalidation errors are normal when seeding the database without a server running
@@ -140,16 +139,7 @@ export const seed = async ({
       ),
     ])
 
-  const [
-    customer,
-    imageHat,
-    imageTshirtBlack,
-    imageTshirtWhite,
-    imageHero,
-    accessoriesCategory,
-    tshirtsCategory,
-    hatsCategory,
-  ] = await Promise.all([
+  const [customer, imageHat, imageTshirtBlack, imageTshirtWhite, imageHero] = await Promise.all([
     payload.create({
       collection: 'users',
       data: {
@@ -179,16 +169,94 @@ export const seed = async ({
       data: imageHero1Data,
       file: heroBuffer,
     }),
-    ...categories.map((category) =>
+  ])
+
+  payload.logger.info(`- Seeding navigation pages...`)
+
+  const [menPage, womenPage, childPage, salesPage, newPage] = await Promise.all(
+    [
+      { navigationLabel: 'MEN', navigationOrder: 10, slug: 'men', title: 'Men' },
+      { navigationLabel: 'WOMEN', navigationOrder: 20, slug: 'women', title: 'Women' },
+      { navigationLabel: 'CHILD', navigationOrder: 30, slug: 'child', title: 'Child' },
+      { navigationLabel: 'SALES', navigationOrder: 40, slug: 'sales', title: 'Sales All' },
+      { navigationLabel: 'NEW', navigationOrder: 50, slug: 'new', title: 'New' },
+    ].map((page) =>
       payload.create({
-        collection: 'categories',
+        collection: 'pages',
+        depth: 0,
         data: {
-          title: category,
-          slug: category,
+          _status: 'published',
+          hero: {
+            type: 'none',
+          },
+          layout: [],
+          meta: {
+            title: page.title,
+          },
+          navigationLabel: page.navigationLabel,
+          navigationOrder: page.navigationOrder,
+          showInNavigation: true,
+          slug: page.slug,
+          title: page.title,
         },
       }),
     ),
-  ])
+  )
+
+  const seededCategories = await Promise.all(
+    [
+      { key: 'menAccessories', mainPage: menPage.id, slug: 'accessories', title: 'Accessories' },
+      { key: 'menTopWear', mainPage: menPage.id, slug: 'top-wear', title: 'Top Wear' },
+      { key: 'menBottomWear', mainPage: menPage.id, slug: 'bottom-wear', title: 'Bottom Wear' },
+      { key: 'menFootwear', mainPage: menPage.id, slug: 'footwear', title: 'Footwear' },
+      { key: 'womenSuits', mainPage: womenPage.id, slug: 'suits', title: 'Suits' },
+      { key: 'womenLahngas', mainPage: womenPage.id, slug: 'lahngas', title: 'Lahngas' },
+      {
+        key: 'womenBridalDress',
+        mainPage: womenPage.id,
+        slug: 'bridal-dress',
+        title: 'Bridal Dress',
+      },
+      { key: 'womenOccasional', mainPage: womenPage.id, slug: 'occasional', title: 'Occasional' },
+      { key: 'womenFestivals', mainPage: womenPage.id, slug: 'festivals', title: 'Festivals' },
+      { key: 'childBoys', mainPage: childPage.id, slug: 'boys', title: 'Boys' },
+      { key: 'childGirls', mainPage: childPage.id, slug: 'girls', title: 'Girls' },
+      { key: 'childBaby', mainPage: childPage.id, slug: 'baby', title: 'Baby' },
+      {
+        key: 'childAccessories',
+        mainPage: childPage.id,
+        slug: 'accessories',
+        title: 'Accessories',
+      },
+      { key: 'childFootwear', mainPage: childPage.id, slug: 'footwear', title: 'Footwear' },
+      { key: 'salesPicks', mainPage: salesPage.id, slug: 'sale-picks', title: 'Sale Picks' },
+    ].map(async (category) => ({
+      key: category.key,
+      value: await payload.create({
+        collection: 'categories',
+        data: {
+          mainPage: category.mainPage,
+          slug: category.slug,
+          title: category.title,
+        },
+      }),
+    })),
+  )
+
+  const getSeededCategory = (key: string) => {
+    const category = seededCategories.find((item) => item.key === key)?.value
+
+    if (!category) {
+      throw new Error(`Seeded category missing: ${key}`)
+    }
+
+    return category
+  }
+
+  const [menAccessoriesCategory, menTopWearCategory] = [
+    getSeededCategory('menAccessories'),
+    getSeededCategory('menTopWear'),
+  ]
 
   payload.logger.info(`— Seeding variant types and options...`)
 
@@ -244,7 +312,7 @@ export const seed = async ({
       galleryImage: imageHat,
       metaImage: imageHat,
       variantTypes: [colorVariantType],
-      categories: [hatsCategory],
+      categories: [menAccessoriesCategory],
       relatedProducts: [],
     }),
   })
@@ -260,7 +328,7 @@ export const seed = async ({
       metaImage: imageTshirtBlack,
       contentImage: imageHero,
       variantTypes: [colorVariantType, sizeVariantType],
-      categories: [tshirtsCategory],
+      categories: [menTopWearCategory],
       relatedProducts: [productHat],
     }),
   })
@@ -313,7 +381,7 @@ export const seed = async ({
 
   payload.logger.info(`— Seeding pages...`)
 
-  const [_, contactPage] = await Promise.all([
+  const [homePage, contactPage] = await Promise.all([
     payload.create({
       collection: 'pages',
       depth: 0,
@@ -333,21 +401,21 @@ export const seed = async ({
 
   payload.logger.info(`— Seeding addresses...`)
 
-  const customerUSAddress = await payload.create({
+  const customerPakistanAddress = await payload.create({
     collection: 'addresses',
     depth: 0,
     data: {
       customer: customer.id,
-      ...(baseAddressUSData as Address),
+      ...(baseAddressPakistanData as Address),
     },
   })
 
-  const customerUKAddress = await payload.create({
+  const secondaryCustomerPakistanAddress = await payload.create({
     collection: 'addresses',
     depth: 0,
     data: {
       customer: customer.id,
-      ...(baseAddressUKData as Address),
+      ...(secondaryAddressPakistanData as Address),
     },
   })
 
@@ -356,30 +424,28 @@ export const seed = async ({
   const pendingTransaction = await payload.create({
     collection: 'transactions',
     data: {
-      currency: 'USD',
+      currency: 'PKR',
       customer: customer.id,
-      paymentMethod: 'stripe',
-      stripe: {
-        customerID: 'cus_123',
-        paymentIntentID: 'pi_123',
+      paymentMethod: 'cashOnDelivery',
+      cashOnDelivery: {
+        note: 'Payment will be collected in cash at delivery.',
       },
       status: 'pending',
-      billingAddress: baseAddressUSData,
+      billingAddress: baseAddressPakistanData,
     },
   })
 
   const succeededTransaction = await payload.create({
     collection: 'transactions',
     data: {
-      currency: 'USD',
+      currency: 'PKR',
       customer: customer.id,
-      paymentMethod: 'stripe',
-      stripe: {
-        customerID: 'cus_123',
-        paymentIntentID: 'pi_123',
+      paymentMethod: 'cashOnDelivery',
+      cashOnDelivery: {
+        note: 'Payment will be collected in cash at delivery.',
       },
       status: 'succeeded',
-      billingAddress: baseAddressUSData,
+      billingAddress: baseAddressPakistanData,
     },
   })
 
@@ -396,7 +462,7 @@ export const seed = async ({
     collection: 'carts',
     data: {
       customer: customer.id,
-      currency: 'USD',
+      currency: 'PKR',
       items: [
         {
           product: productTshirt.id,
@@ -413,7 +479,7 @@ export const seed = async ({
   const abandonedCart = await payload.create({
     collection: 'carts',
     data: {
-      currency: 'USD',
+      currency: 'PKR',
       createdAt: oldTimestamp,
       items: [
         {
@@ -429,7 +495,7 @@ export const seed = async ({
     collection: 'carts',
     data: {
       customer: customer.id,
-      currency: 'USD',
+      currency: 'PKR',
       purchasedAt: new Date().toISOString(),
       subtotal: 7499,
       items: [
@@ -459,9 +525,9 @@ export const seed = async ({
     collection: 'orders',
     data: {
       amount: 7499,
-      currency: 'USD',
+      currency: 'PKR',
       customer: customer.id,
-      shippingAddress: baseAddressUSData,
+      shippingAddress: baseAddressPakistanData,
       items: [
         {
           product: productTshirt.id,
@@ -483,9 +549,9 @@ export const seed = async ({
     collection: 'orders',
     data: {
       amount: 7499,
-      currency: 'USD',
+      currency: 'PKR',
       customer: customer.id,
-      shippingAddress: baseAddressUSData,
+      shippingAddress: baseAddressPakistanData,
       items: [
         {
           product: productTshirt.id,
@@ -512,23 +578,62 @@ export const seed = async ({
         navItems: [
           {
             link: {
-              type: 'custom',
-              label: 'Home',
-              url: '/',
+              type: 'reference',
+              label: 'HOME',
+              reference: {
+                relationTo: 'pages',
+                value: homePage.id,
+              },
             },
           },
           {
             link: {
-              type: 'custom',
-              label: 'Shop',
-              url: '/shop',
+              type: 'reference',
+              label: 'MEN',
+              reference: {
+                relationTo: 'pages',
+                value: menPage.id,
+              },
             },
           },
           {
             link: {
-              type: 'custom',
-              label: 'Account',
-              url: '/account',
+              type: 'reference',
+              label: 'WOMEN',
+              reference: {
+                relationTo: 'pages',
+                value: womenPage.id,
+              },
+            },
+          },
+          {
+            link: {
+              type: 'reference',
+              label: 'CHILD',
+              reference: {
+                relationTo: 'pages',
+                value: childPage.id,
+              },
+            },
+          },
+          {
+            link: {
+              type: 'reference',
+              label: 'SALES',
+              reference: {
+                relationTo: 'pages',
+                value: salesPage.id,
+              },
+            },
+          },
+          {
+            link: {
+              type: 'reference',
+              label: 'NEW',
+              reference: {
+                relationTo: 'pages',
+                value: newPage.id,
+              },
             },
           },
         ],
@@ -541,8 +646,8 @@ export const seed = async ({
           {
             link: {
               type: 'custom',
-              label: 'Admin',
-              url: '/admin',
+              label: 'Shop',
+              url: '/shop',
             },
           },
           {
@@ -555,17 +660,15 @@ export const seed = async ({
           {
             link: {
               type: 'custom',
-              label: 'Source Code',
-              newTab: true,
-              url: 'https://github.com/payloadcms/payload/tree/3.x/templates/website',
+              label: 'Create account',
+              url: '/create-account',
             },
           },
           {
             link: {
               type: 'custom',
-              label: 'Payload',
-              newTab: true,
-              url: 'https://payloadcms.com/',
+              label: 'Help',
+              url: '/contact',
             },
           },
         ],

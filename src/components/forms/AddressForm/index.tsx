@@ -4,7 +4,6 @@ import { useForm } from 'react-hook-form'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { useAddresses } from '@payloadcms/plugin-ecommerce/client/react'
-import { defaultCountries as supportedCountries } from '@payloadcms/plugin-ecommerce/client/react'
 import { Address, Config } from '@/payload-types'
 import {
   Select,
@@ -19,6 +18,7 @@ import { Button } from '@/components/ui/button'
 import { deepMergeSimple } from 'payload/shared'
 import { FormError } from '@/components/forms/FormError'
 import { FormItem } from '@/components/forms/FormItem'
+import { PAKISTAN_COUNTRY, SUPPORTED_COUNTRIES } from '@/lib/ecommerceDefaults'
 
 type AddressFormValues = {
   title?: string | null
@@ -56,14 +56,20 @@ export const AddressForm: React.FC<Props> = ({
     formState: { errors },
     setValue,
   } = useForm<AddressFormValues>({
-    defaultValues: initialData,
+    defaultValues: {
+      ...initialData,
+      country: initialData?.country || PAKISTAN_COUNTRY.value,
+    },
   })
 
   const { createAddress, updateAddress } = useAddresses()
 
   const onSubmit = useCallback(
     async (data: AddressFormValues) => {
-      const newData = deepMergeSimple(initialData || {}, data)
+      const newData = deepMergeSimple(initialData || {}, {
+        ...data,
+        country: PAKISTAN_COUNTRY.value,
+      })
 
       if (!skipSubmission) {
         if (addressID) {
@@ -174,7 +180,7 @@ export const AddressForm: React.FC<Props> = ({
         </FormItem>
 
         <FormItem>
-          <Label htmlFor="postalCode">Zip Code*</Label>
+          <Label htmlFor="postalCode">Postal Code*</Label>
           <Input
             id="postalCode"
             {...register('postalCode', { required: 'Postal code is required.' })}
@@ -193,24 +199,16 @@ export const AddressForm: React.FC<Props> = ({
               setValue('country', value, { shouldValidate: true })
             }}
             required
-            defaultValue={initialData?.country || ''}
+            defaultValue={initialData?.country || PAKISTAN_COUNTRY.value}
           >
             <SelectTrigger id="country" className="w-full">
               <SelectValue placeholder="Country" />
             </SelectTrigger>
             <SelectContent>
-              {supportedCountries.map((country) => {
-                const value = typeof country === 'string' ? country : country.value
-                const label =
-                  typeof country === 'string'
-                    ? country
-                    : typeof country.label === 'string'
-                      ? country.label
-                      : value
-
+              {SUPPORTED_COUNTRIES.map((country) => {
                 return (
-                  <SelectItem key={value} value={value}>
-                    {label}
+                  <SelectItem key={country.value} value={country.value}>
+                    {country.label}
                   </SelectItem>
                 )
               })}

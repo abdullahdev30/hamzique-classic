@@ -17,7 +17,7 @@ export const ArchiveBlock: React.FC<
 
   const limit = limitFromProps || 3
 
-  let posts: Product[] = []
+  let posts: Partial<Product>[] = []
 
   if (populateBy === 'collection') {
     const payload = await getPayload({ config: configPromise })
@@ -31,15 +31,46 @@ export const ArchiveBlock: React.FC<
       collection: 'products',
       depth: 1,
       limit,
+      overrideAccess: false,
+      populate: {
+        variants: {
+          priceInPKR: true,
+        },
+      },
+      select: {
+        title: true,
+        slug: true,
+        gallery: true,
+        categories: true,
+        priceInPKR: true,
+        priceTag: true,
+        discountPercent: true,
+        variants: true,
+      },
       ...(flattenedCategories && flattenedCategories.length > 0
         ? {
             where: {
-              categories: {
-                in: flattenedCategories,
-              },
+              and: [
+                {
+                  _status: {
+                    equals: 'published',
+                  },
+                },
+                {
+                  categories: {
+                    in: flattenedCategories,
+                  },
+                },
+              ],
             },
           }
-        : {}),
+        : {
+            where: {
+              _status: {
+                equals: 'published',
+              },
+            },
+          }),
     })
 
     posts = fetchedProducts.docs

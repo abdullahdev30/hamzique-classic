@@ -1,14 +1,11 @@
 import type { ReactNode } from 'react'
 
-import { AdminBar } from '@/components/AdminBar'
 import { Footer } from '@/components/Footer'
 import { Header } from '@/components/Header'
 import { LivePreviewListener } from '@/components/LivePreviewListener'
-import { ensureStartsWith } from '@/utilities/ensureStartsWith'
 import { Providers } from '@/providers'
-import { InitTheme } from '@/providers/Theme/InitTheme'
-import { GeistSans } from 'geist/font/sans'
 import { GeistMono } from 'geist/font/mono'
+import { Playfair_Display, Plus_Jakarta_Sans, Poppins, Tangerine } from 'next/font/google'
 import React from 'react'
 import './globals.css'
 
@@ -39,21 +36,53 @@ const twitterSite = TWITTER_SITE ? ensureStartsWith(TWITTER_SITE, 'https://') : 
     }),
 } */
 
+const plusJakarta = Plus_Jakarta_Sans({
+  display: 'swap',
+  subsets: ['latin'],
+  variable: '--font-plus-jakarta',
+})
+
+const playfair = Playfair_Display({
+  display: 'swap',
+  subsets: ['latin'],
+  variable: '--font-playfair',
+})
+
+const poppins = Poppins({
+  display: 'swap',
+  subsets: ['latin'],
+  variable: '--font-poppins',
+  weight: ['400', '500', '600', '700'],
+})
+
+const tangerine = Tangerine({
+  display: 'swap',
+  subsets: ['latin'],
+  variable: '--font-tangerine',
+  weight: ['400', '700'],
+})
+
 export default async function RootLayout({ children }: { children: ReactNode }) {
   return (
     <html
-      className={[GeistSans.variable, GeistMono.variable].filter(Boolean).join(' ')}
+      className={[
+        plusJakarta.variable,
+        playfair.variable,
+        poppins.variable,
+        tangerine.variable,
+        GeistMono.variable,
+      ]
+        .filter(Boolean)
+        .join(' ')}
       lang="en"
       suppressHydrationWarning
     >
       <head>
-        <InitTheme />
         <link href="/favicon.ico" rel="icon" sizes="32x32" />
         <link href="/favicon.svg" rel="icon" type="image/svg+xml" />
       </head>
       <body>
         <Providers>
-          <AdminBar />
           <LivePreviewListener />
 
           <Header />

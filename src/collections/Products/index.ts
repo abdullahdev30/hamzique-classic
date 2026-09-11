@@ -24,7 +24,7 @@ export const ProductsCollection: CollectionOverride = ({ defaultCollection }) =>
   ...defaultCollection,
   admin: {
     ...defaultCollection?.admin,
-    defaultColumns: ['title', 'enableVariants', '_status', 'variants.variants'],
+    defaultColumns: ['title', 'priceTag', 'discountPercent', 'enableVariants', '_status'],
     livePreview: {
       url: ({ data, req }) =>
         generatePreviewPath({
@@ -49,7 +49,11 @@ export const ProductsCollection: CollectionOverride = ({ defaultCollection }) =>
     variants: true,
     enableVariants: true,
     gallery: true,
-    priceInUSD: true,
+    priceInPKR: true,
+    priceTag: true,
+    discountPercent: true,
+    sizes: true,
+    colorChart: true,
     inventory: true,
     meta: true,
   },
@@ -143,6 +147,85 @@ export const ProductsCollection: CollectionOverride = ({ defaultCollection }) =>
         {
           fields: [
             ...defaultCollection.fields,
+            {
+              name: 'priceTag',
+              type: 'text',
+              admin: {
+                description:
+                  'Optional short label shown with the product price, e.g. Limited deal.',
+              },
+              label: 'Pricing tag',
+            },
+            {
+              name: 'discountPercent',
+              type: 'number',
+              admin: {
+                description:
+                  'Optional percentage discount shown on product cards and detail pages.',
+                step: 1,
+              },
+              defaultValue: 0,
+              label: 'Discount percent',
+              max: 100,
+              min: 0,
+            },
+            {
+              name: 'sizes',
+              type: 'array',
+              admin: {
+                description: 'Add each available size and any extra charge for that size.',
+                initCollapsed: true,
+              },
+              fields: [
+                {
+                  name: 'label',
+                  type: 'text',
+                  label: 'Size',
+                  required: true,
+                },
+                {
+                  name: 'extraCharge',
+                  type: 'number',
+                  admin: {
+                    step: 1,
+                  },
+                  defaultValue: 0,
+                  label: 'Extra charge',
+                  min: 0,
+                },
+                {
+                  name: 'notes',
+                  type: 'text',
+                  label: 'Fit notes',
+                },
+              ],
+              label: 'Sizes',
+              labels: {
+                plural: 'Sizes',
+                singular: 'Size',
+              },
+            },
+            {
+              name: 'colorChart',
+              type: 'array',
+              admin: {
+                description: 'Optional colors to display on the product detail page.',
+                initCollapsed: true,
+              },
+              fields: [
+                {
+                  name: 'label',
+                  type: 'text',
+                  label: 'Color name',
+                  required: true,
+                },
+              ],
+              label: 'Color chart',
+              labels: {
+                plural: 'Colors',
+                singular: 'Color',
+              },
+            },
             {
               name: 'relatedProducts',
               type: 'relationship',

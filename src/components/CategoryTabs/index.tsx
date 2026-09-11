@@ -18,7 +18,7 @@ async function List() {
 
   const categories = categoriesData.docs?.map((category) => {
     return {
-      href: `/shop/${category.slug}`,
+      href: `/shop?category=${category.slug}`,
       title: category.title,
     }
   })
@@ -40,8 +40,8 @@ async function List() {
 }
 
 const skeleton = 'mb-3 h-4 w-5/6 animate-pulse rounded'
-const activeAndTitles = 'bg-neutral-800 dark:bg-neutral-300'
-const items = 'bg-neutral-400 dark:bg-neutral-700'
+const activeAndTitles = 'bg-[var(--color-text-primary)]'
+const items = 'bg-[var(--color-surface-secondary)]'
 
 export function CategoryTabs() {
   return (

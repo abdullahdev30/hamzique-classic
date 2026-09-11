@@ -89,7 +89,7 @@ export const Carousel: Block = {
   ],
   interfaceName: 'CarouselBlock',
   labels: {
-    plural: 'Carousels',
-    singular: 'Carousel',
+    plural: 'Products Carousels',
+    singular: 'Products Carousel',
   },
 }

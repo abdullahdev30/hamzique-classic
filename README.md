@@ -24,7 +24,7 @@ Core features:
 - [Carts](#carts)
 - [Guest checkout](#guests)
 - [Orders & Transactions](#orders-and-transactions)
-- [Stripe Payments](#stripe)
+- [Cash on Delivery](#cash-on-delivery)
 - [Currencies](#currencies)
 - [Automated Tests](#tests)
 
@@ -199,11 +199,11 @@ This email verification flow prevents unauthorized access to order details. The 
 
 ## Currencies
 
-By default the template ships with support only for USD however you can change the supported currencies via the [plugin configuration](https://payloadcms.com/docs/ecommerce/plugin#currencies). You will need to ensure that the supported currencies in Payload are also configured in your Payment platforms.
+This store is configured to use PKR only.
 
-## Stripe
+## Cash on Delivery
 
-By default we ship with the Stripe adapter configured, so you'll need to setup the `secretKey`, `publishableKey` and `webhookSecret` from your Stripe dashboard. Follow [Stripe's guide](https://docs.stripe.com/get-started/api-request?locale=en-GB) on how to set this up.
+Checkout is configured for cash on delivery. No external payment provider keys are required.
 
 ## Tests
 
@@ -255,7 +255,7 @@ Core features:
 - SEO
 - Search
 - Live preview
-- Stripe payments
+- Cash on delivery payments
 
 ### Cache
 

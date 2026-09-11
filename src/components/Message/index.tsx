@@ -25,11 +25,13 @@ export const Message: React.FC<{
     return (
       <div
         className={clsx(
-          'p-4 my-8 rounded-lg',
+          'my-8 rounded-lg p-4',
           {
-            'bg-success ': Boolean(success),
-            ' bg-warning': Boolean(warning),
-            'bg-error': Boolean(error),
+            'bg-[var(--tag-success-bg)] text-[var(--color-status-success)]': Boolean(success),
+            'bg-[var(--tag-warning-bg)] text-[var(--color-status-warning)]': Boolean(warning),
+            'bg-[var(--tag-error-bg)] text-[var(--color-status-error)]': Boolean(error),
+            'bg-[var(--color-notification-bg)] text-[var(--color-notification-text)] ring-1 ring-[var(--color-notification-border)]':
+              Boolean(message) && !error && !success && !warning,
           },
           className,
         )}

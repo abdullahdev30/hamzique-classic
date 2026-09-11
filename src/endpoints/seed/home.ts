@@ -14,7 +14,7 @@ export const homePageData: (args: ProductArgs) => RequiredDataFromCollectionSlug
     slug: 'home',
     _status: 'published',
     hero: {
-      type: 'lowImpact',
+      type: 'none',
       links: [
         {
           link: {
@@ -139,6 +139,24 @@ export const homePageData: (args: ProductArgs) => RequiredDataFromCollectionSlug
       },
     },
     layout: [
+      {
+        blockName: 'Home Hero Carousel',
+        blockType: 'heroCarousel',
+        ctaLabel: 'Shop now',
+        ctaUrl: '/shop',
+        description: 'Refined everyday pieces with a classic point of view.',
+        eyebrow: 'Hamzique Classic',
+        heading: 'Classic essentials, styled for now',
+        populateBy: 'selection',
+        slides: [
+          {
+            image: contentImage,
+          },
+          {
+            image: metaImage,
+          },
+        ],
+      },
       {
         blockName: 'Content Block',
         blockType: 'content',

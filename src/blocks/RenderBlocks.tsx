@@ -3,7 +3,9 @@ import { BannerBlock } from '@/blocks/Banner/Component'
 import { CallToActionBlock } from '@/blocks/CallToAction/Component'
 import { CarouselBlock } from '@/blocks/Carousel/Component'
 import { ContentBlock } from '@/blocks/Content/Component'
+import { FAQBlock } from '@/blocks/FAQ/Component'
 import { FormBlock } from '@/blocks/Form/Component'
+import { HeroCarouselBlock } from '@/blocks/HeroCarousel/Component'
 import { MediaBlock } from '@/blocks/MediaBlock/Component'
 import { ThreeItemGridBlock } from '@/blocks/ThreeItemGrid/Component'
 import { toKebabCase } from '@/utilities/toKebabCase'
@@ -17,7 +19,9 @@ const blockComponents = {
   carousel: CarouselBlock,
   content: ContentBlock,
   cta: CallToActionBlock,
+  faq: FAQBlock,
   formBlock: FormBlock,
+  heroCarousel: HeroCarouselBlock,
   mediaBlock: MediaBlock,
   threeItemGrid: ThreeItemGridBlock,
 }
@@ -37,10 +41,11 @@ export const RenderBlocks: React.FC<{
 
           if (blockType && blockType in blockComponents) {
             const Block = blockComponents[blockType]
+            const isFullBleed = blockType === 'heroCarousel'
 
             if (Block) {
               return (
-                <div className="my-16" key={index}>
+                <div className={isFullBleed ? 'my-0' : 'my-16'} key={index}>
                   {/* eslint-disable-next-line @typescript-eslint/ban-ts-comment */}
                   {/* @ts-ignore - weird type mismatch here */}
                   <Block id={toKebabCase(blockName!)} {...block} />

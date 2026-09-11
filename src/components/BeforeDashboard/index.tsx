@@ -22,19 +22,9 @@ export const BeforeDashboard: React.FC = () => {
           {' to see the results.'}
         </li>
         <li>
-          {'Head over to '}
+          {'Checkout is configured for cash on delivery in PKR. See the '}
           <a
-            href="https://dashboard.stripe.com/test/apikeys"
-            rel="noopener noreferrer"
-            target="_blank"
-          >
-            Stripe to obtain your API Keys
-          </a>
-          {
-            '. Create a new account if needed, then copy them into your environment variables and restart your server. See the '
-          }
-          <a
-            href="https://github.com/payloadcms/payload/blob/3.x/templates/ecommerce/README.md#stripe"
+            href="https://github.com/payloadcms/payload/blob/3.x/templates/ecommerce"
             rel="noopener noreferrer"
             target="_blank"
           >

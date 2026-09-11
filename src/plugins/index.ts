@@ -4,9 +4,9 @@ import { Plugin } from 'payload'
 import { GenerateTitle, GenerateURL } from '@payloadcms/plugin-seo/types'
 import { FixedToolbarFeature, HeadingFeature, lexicalEditor } from '@payloadcms/richtext-lexical'
 import { ecommercePlugin } from '@payloadcms/plugin-ecommerce'
+import { s3Storage } from '@payloadcms/storage-s3'
 
-import { stripeAdapter } from '@payloadcms/plugin-ecommerce/payments/stripe'
-
+import { Media } from '@/collections/Media'
 import { Page, Product } from '@/payload-types'
 import { getServerSideURL } from '@/utilities/getURL'
 import { ProductsCollection } from '@/collections/Products'
@@ -15,6 +15,8 @@ import { adminOnlyFieldAccess } from '@/access/adminOnlyFieldAccess'
 import { customerOnlyFieldAccess } from '@/access/customerOnlyFieldAccess'
 import { isAdmin } from '@/access/isAdmin'
 import { isDocumentOwner } from '@/access/isDocumentOwner'
+import { CURRENCIES_CONFIG, SUPPORTED_COUNTRIES } from '@/lib/ecommerceDefaults'
+import { cashOnDeliveryAdapter } from '@/payments/cashOnDelivery'
 
 const generateTitle: GenerateTitle<Product | Page> = ({ doc }) => {
   return doc?.title ? `${doc.title} | Payload Ecommerce Template` : 'Payload Ecommerce Template'
@@ -26,7 +28,33 @@ const generateURL: GenerateURL<Product | Page> = ({ doc }) => {
   return doc?.slug ? `${url}/${doc.slug}` : url
 }
 
+const s3Bucket = process.env.S3_BUCKET || 'images'
+const s3Endpoint = process.env.S3_ENDPOINT
+const s3StorageEnabled = Boolean(
+  s3Endpoint &&
+  process.env.S3_ACCESS_KEY_ID &&
+  process.env.S3_SECRET_ACCESS_KEY &&
+  process.env.S3_REGION,
+)
+
 export const plugins: Plugin[] = [
+  s3Storage({
+    alwaysInsertFields: true,
+    bucket: s3Bucket,
+    collections: {
+      [Media.slug]: true,
+    },
+    config: {
+      credentials: {
+        accessKeyId: process.env.S3_ACCESS_KEY_ID || '',
+        secretAccessKey: process.env.S3_SECRET_ACCESS_KEY || '',
+      },
+      endpoint: s3Endpoint,
+      forcePathStyle: true,
+      region: process.env.S3_REGION || 'local',
+    },
+    enabled: s3StorageEnabled,
+  }),
   seoPlugin({
     generateTitle,
     generateURL,
@@ -87,6 +115,10 @@ export const plugins: Plugin[] = [
     customers: {
       slug: 'users',
     },
+    addresses: {
+      supportedCountries: SUPPORTED_COUNTRIES,
+    },
+    currencies: CURRENCIES_CONFIG,
     orders: {
       ordersCollectionOverride: ({ defaultCollection }) => ({
         ...defaultCollection,
@@ -116,13 +148,7 @@ export const plugins: Plugin[] = [
       }),
     },
     payments: {
-      paymentMethods: [
-        stripeAdapter({
-          secretKey: process.env.STRIPE_SECRET_KEY!,
-          publishableKey: process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY!,
-          webhookSecret: process.env.STRIPE_WEBHOOKS_SIGNING_SECRET!,
-        }),
-      ],
+      paymentMethods: [cashOnDeliveryAdapter()],
     },
     products: {
       productsCollectionOverride: ProductsCollection,

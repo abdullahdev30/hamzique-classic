@@ -12,11 +12,15 @@ export function FooterMenu({ menu }: Props) {
 
   return (
     <nav>
-      <ul>
+      <ul className="grid gap-2">
         {menu.map((item) => {
           return (
             <li key={item.id}>
-              <CMSLink appearance="link" {...item.link} />
+              <CMSLink
+                appearance="link"
+                className="text-[var(--color-text-secondary)] transition-colors hover:text-[var(--color-cta-accent)]"
+                {...item.link}
+              />
             </li>
           )
         })}

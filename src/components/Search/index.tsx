@@ -8,11 +8,18 @@ import React from 'react'
 
 type Props = {
   className?: string
+  inputLabel?: string
+  placeholder?: string
 }
 
-export const Search: React.FC<Props> = ({ className }) => {
+export const Search: React.FC<Props> = ({
+  className,
+  inputLabel = 'Search products',
+  placeholder = 'Search for products...',
+}) => {
   const router = useRouter()
   const searchParams = useSearchParams()
+  const searchId = React.useId()
 
   function onSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault()
@@ -32,18 +39,26 @@ export const Search: React.FC<Props> = ({ className }) => {
 
   return (
     <form className={cn('relative w-full', className)} onSubmit={onSubmit}>
+      <label className="sr-only" htmlFor={searchId}>
+        {inputLabel}
+      </label>
       <input
         autoComplete="off"
-        className="w-full rounded-lg border bg-white px-4 py-2 text-sm text-black placeholder:text-neutral-500 dark:border-neutral-800 dark:bg-black dark:text-white dark:placeholder:text-neutral-400"
+        className="h-10 w-full border border-[var(--color-surface-secondary)] bg-[var(--color-surface-secondary)] px-3 pr-11 font-accent text-sm text-[var(--color-text-primary)] outline-none transition-colors placeholder:text-[var(--color-text-secondary)] focus:border-[var(--color-cta-accent)]"
         defaultValue={searchParams?.get('q') || ''}
+        id={searchId}
         key={searchParams?.get('q')}
         name="search"
-        placeholder="Search for products..."
+        placeholder={placeholder}
         type="text"
       />
-      <div className="absolute right-0 top-0 mr-3 flex h-full items-center">
-        <SearchIcon className="h-4" />
-      </div>
+      <button
+        aria-label="Submit search"
+        className="absolute right-0 top-0 flex h-full w-11 items-center justify-center text-[var(--color-text-primary)] transition-colors hover:text-[var(--color-cta-accent)]"
+        type="submit"
+      >
+        <SearchIcon className="h-6 w-6 stroke-[1.5]" />
+      </button>
     </form>
   )
 }
