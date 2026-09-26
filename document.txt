@@ -1,0 +1,1586 @@
+ECOMMERCE STORE - COMPLETE SITE FLOW AND PAYLOAD CMS GUIDE
+===========================================================
+
+Project root: C:\work\project\ecommerce-store
+Framework: Next.js App Router + Payload CMS 3 + React 19 + Tailwind CSS
+Database: PostgreSQL through @payloadcms/db-postgres
+Main Payload config: src/payload.config.ts
+
+
+1. HIGH LEVEL ARCHITECTURE
+==========================
+
+This project is a single Next.js application that serves both:
+
+1. The public ecommerce storefront
+2. The Payload CMS admin panel and APIs
+
+The frontend is inside:
+
+  src/app/(app)
+
+The Payload admin/API routes are inside:
+
+  src/app/(payload)
+
+Payload is not a separate backend server in this project. It runs inside the same Next.js app. Frontend server components call Payload directly with the Payload Local API:
+
+  import { getPayload } from 'payload'
+  import configPromise from '@payload-config'
+
+  const payload = await getPayload({ config: configPromise })
+
+The main connection point is:
+
+  src/payload.config.ts
+
+That file defines the database adapter, admin user collection, custom collections, globals, editor, plugins, storage, and generated TypeScript output.
+
+
+2. REQUEST FLOW: HOW A PAGE LOADS
+=================================
+
+Basic public page request:
+
+1. Visitor opens a URL such as /, /men, /women, /shop, or /products/my-product.
+2. Next.js matches the route under src/app/(app).
+3. The route component runs mostly on the server.
+4. The route calls Payload through getPayload({ config: configPromise }).
+5. Payload queries PostgreSQL using the configured collections.
+6. The server renders HTML with the CMS data.
+7. Small client components hydrate only where interactivity is needed, such as cart, auth, theme toggle, variant selector, gallery, and checkout.
+
+Example page flow for /men:
+
+  src/app/(app)/[slug]/page.tsx
+    -> queryPageBySlug({ slug: 'men' })
+    -> Payload collection: pages
+    -> RenderHero(page.hero)
+    -> RenderBlocks(page.layout)
+    -> CategoryProductSection(page)
+    -> Payload collection: categories
+    -> Payload collection: products
+
+Example product flow for /products/black-shirt:
+
+  src/app/(app)/products/[slug]/page.tsx
+    -> queryProductBySlug({ slug: 'black-shirt' })
+    -> Payload collection: products
+    -> product gallery, description, sizes, colors, variants, inventory, related products
+    -> AddToCart uses ecommerce plugin client cart API
+
+
+3. PAYLOAD CONFIGURATION
+========================
+
+File:
+
+  src/payload.config.ts
+
+Important configuration:
+
+Admin user:
+
+  admin.user = Users.slug
+
+This means the users collection controls login to Payload admin.
+
+Custom collections registered directly:
+
+  users
+  pages
+  categories
+  media
+
+Globals:
+
+  header
+  footer
+
+Database:
+
+  postgresAdapter({
+    pool: {
+      connectionString: process.env.DATABASE_URL || '',
+    },
+    push: false,
+  })
+
+Rich text editor:
+
+  lexicalEditor with underline, bold, italic, lists, links, indent, and table features.
+
+Generated Payload types:
+
+  src/payload-types.ts
+
+Plugins loaded:
+
+  s3Storage
+  seoPlugin
+  formBuilderPlugin
+  ecommercePlugin
+
+
+4. PAYLOAD ROUTES
+=================
+
+Payload admin panel:
+
+  /admin
+
+Implemented by:
+
+  src/app/(payload)/admin/[[...segments]]/page.tsx
+
+Payload REST API:
+
+  /api/[collection]
+  /api/[collection]/[id]
+  /api/globals/[global]
+  /api/users/login
+  /api/users/logout
+  /api/users/me
+  /api/users/create
+  /api/users/forgot-password
+  /api/users/reset-password
+
+Implemented by:
+
+  src/app/(payload)/api/[...slug]/route.ts
+
+Payload GraphQL API:
+
+  /api/graphql
+
+Implemented by:
+
+  src/app/(payload)/api/graphql/route.ts
+
+Payload GraphQL Playground:
+
+  /api/graphql-playground
+
+Implemented by:
+
+  src/app/(payload)/api/graphql-playground/route.ts
+
+Preview route:
+
+  /next/preview
+
+Implemented by:
+
+  src/app/(app)/next/preview/route.ts
+
+Exit preview:
+
+  /next/exit-preview
+
+Implemented by:
+
+  src/app/(app)/next/exit-preview/route.ts
+
+Seed route:
+
+  /next/seed
+
+Implemented by:
+
+  src/app/(app)/next/seed/route.ts
+
+
+5. PAYLOAD COLLECTIONS
+======================
+
+The generated Payload config includes these collections:
+
+Directly configured by this repo:
+
+  users
+  pages
+  categories
+  media
+
+Added by form builder plugin:
+
+  forms
+  form-submissions
+
+Added by ecommerce plugin:
+
+  addresses
+  variants
+  variantTypes
+  variantOptions
+  products
+  carts
+  orders
+  transactions
+
+Payload internal collections:
+
+  payload-kv
+  payload-locked-documents
+  payload-preferences
+  payload-migrations
+
+
+6. WHAT YOU CONTROL FROM PAYLOAD ADMIN
+======================================
+
+6.1 Users
+---------
+
+Collection file:
+
+  src/collections/Users/index.ts
+
+Controls:
+
+  - Customer and admin accounts
+  - Name
+  - Email/password authentication
+  - Roles: admin or customer
+  - Related orders through join field
+  - Related carts through join field
+  - Related addresses through join field
+
+Access:
+
+  - Public users can create accounts.
+  - Admin users can access Payload admin.
+  - Users can read/update themselves.
+  - Only admins can delete users.
+  - Only admins can read or change roles.
+
+Important hook:
+
+  src/collections/Users/hooks/ensureFirstUserIsAdmin.ts
+
+This makes sure the first created user can become an admin.
+
+
+6.2 Pages
+---------
+
+Collection file:
+
+  src/collections/Pages/index.ts
+
+Controls:
+
+  - Page title
+  - Slug
+  - Published date
+  - Draft/published status
+  - Whether page appears in storefront navigation
+  - Navigation label
+  - Navigation order
+  - Hero content
+  - Page layout blocks
+  - SEO title
+  - SEO description
+  - SEO image
+
+Frontend routes using pages:
+
+  /                         -> home page, slug defaults to home
+  /[slug]                   -> dynamic page
+  /[slug]/[category]        -> page filtered by category
+
+Rendering files:
+
+  src/app/(app)/page.tsx
+  src/app/(app)/[slug]/page.tsx
+  src/app/(app)/[slug]/[category]/page.tsx
+  src/heros/RenderHero.tsx
+  src/blocks/RenderBlocks.tsx
+
+Drafts:
+
+  Pages support drafts with autosave.
+  Public users only see pages where _status equals published.
+  Admin preview can see draft content through draft mode.
+
+Revalidation:
+
+  src/collections/Pages/hooks/revalidatePage.ts
+
+When a page is published, unpublished, changed, or deleted, the matching frontend path and header page cache are revalidated.
+
+
+6.3 Categories
+--------------
+
+Collection file:
+
+  src/collections/Categories.ts
+
+Controls:
+
+  - Category title
+  - Category slug
+  - Main page relationship
+
+The mainPage relationship decides where a category appears in navigation and what URL it gets.
+
+Example:
+
+  Category: Shirts
+  Main page: Men
+  Category URL: /men/shirts
+
+If a category has no suitable main page relationship in navigation contexts, the fallback URL can be:
+
+  /shop?category=[category-id]
+
+Frontend usage:
+
+  src/components/Header/index.tsx
+  src/components/Header/navCategories.ts
+  src/components/CategoryProductSection/index.tsx
+  src/app/(app)/shop/page.tsx
+  src/app/(app)/[slug]/[category]/page.tsx
+
+Revalidation:
+
+  src/collections/Categories/hooks/revalidateCategories.ts
+
+When categories change, the cached category navigation tag is revalidated.
+
+
+6.4 Media
+---------
+
+Collection file:
+
+  src/collections/Media.ts
+
+Controls:
+
+  - Uploaded images/files
+  - Required alt text
+  - Optional rich text caption
+
+Local upload path:
+
+  public/media
+
+Optional S3 storage:
+
+  src/plugins/index.ts
+
+S3 is enabled only if these env vars exist:
+
+  S3_ENDPOINT
+  S3_ACCESS_KEY_ID
+  S3_SECRET_ACCESS_KEY
+  S3_REGION
+  S3_BUCKET
+
+Media is used by:
+
+  - Page heroes
+  - Hero carousel slides
+  - Media blocks
+  - Product galleries
+  - SEO images
+
+
+6.5 Products
+------------
+
+Products are added by @payloadcms/plugin-ecommerce and customized here:
+
+  src/collections/Products/index.ts
+
+Controls:
+
+  - Product title
+  - Slug
+  - Draft/published status
+  - Description rich text
+  - Product gallery
+  - Optional variant-specific gallery image mapping
+  - Product content blocks
+  - Product ecommerce details from the default ecommerce plugin fields
+  - Price in PKR
+  - Pricing tag, such as "Limited deal"
+  - Discount percent
+  - Sizes and extra charges
+  - Color chart labels
+  - Related products
+  - Categories
+  - SEO title, description, and image
+
+Frontend routes using products:
+
+  /products/[slug]
+  /shop
+  /[slug] category product sections
+  /[slug]/[category] filtered category sections
+
+Rendering files:
+
+  src/app/(app)/products/[slug]/page.tsx
+  src/components/product/ProductDescription.tsx
+  src/components/product/Gallery.tsx
+  src/components/product/VariantSelector.tsx
+  src/components/product/StockIndicator.tsx
+  src/components/ProductGridItem/index.tsx
+  src/components/Cart/AddToCart.tsx
+
+Product queries are server-side for page/product listing, then cart interactivity happens client-side through ecommerce plugin hooks.
+
+
+6.6 Variants, Variant Types, Variant Options
+--------------------------------------------
+
+These are added by the ecommerce plugin.
+
+They control:
+
+  - Whether a product has variants
+  - Variant types, for example Color or Size
+  - Variant options, for example Black, White, Small, Medium
+  - Variant-level price
+  - Variant-level inventory
+
+The product gallery can optionally attach an image to a variant option. The frontend uses that to show the matching image for selected variants in product pages, cart, and checkout.
+
+
+6.7 Carts
+---------
+
+Added by ecommerce plugin.
+
+Controls/stores:
+
+  - Current customer or guest cart
+  - Cart items
+  - Product references
+  - Variant references
+  - Quantities
+  - Subtotal
+  - purchasedAt after checkout
+
+Frontend usage:
+
+  src/providers/index.tsx
+  src/components/Cart/*
+  src/components/Cart/AddToCart.tsx
+  src/components/checkout/CheckoutPage.tsx
+
+Client hooks used:
+
+  useCart
+  useCurrency
+  usePayments
+  useAddresses
+
+These come from:
+
+  @payloadcms/plugin-ecommerce/client/react
+
+
+6.8 Addresses
+-------------
+
+Added by ecommerce plugin.
+
+Controls/stores:
+
+  - Customer address records
+  - Billing address selection
+  - Shipping address selection
+
+Supported country:
+
+  Pakistan only
+
+Config file:
+
+  src/lib/ecommerceDefaults.ts
+
+Frontend files:
+
+  src/components/addresses/*
+  src/components/forms/AddressForm/*
+  src/components/checkout/CheckoutAddresses.tsx
+  src/app/(app)/(account)/account/addresses/page.tsx
+
+
+6.9 Orders
+----------
+
+Added by ecommerce plugin and customized in:
+
+  src/plugins/index.ts
+
+Custom order field:
+
+  accessToken
+
+Purpose:
+
+  Allows secure guest order viewing. The token is generated with crypto.randomUUID() on create.
+
+Controls/stores:
+
+  - Order amount
+  - Currency
+  - Customer or customer email
+  - Ordered items
+  - Shipping address
+  - Status
+  - Related transactions
+  - Guest access token
+
+Frontend files:
+
+  src/app/(app)/(account)/orders/page.tsx
+  src/app/(app)/(account)/orders/[id]/page.tsx
+  src/components/OrderItem/index.tsx
+  src/components/OrderStatus/index.tsx
+
+Access:
+
+  - Logged-in customers can view their own orders.
+  - Admins can manage orders in Payload.
+  - Guests can view an order only with matching email and accessToken.
+
+
+6.10 Transactions
+-----------------
+
+Added by ecommerce plugin.
+
+Controls/stores:
+
+  - Payment initiation records
+  - Amount
+  - Currency
+  - Billing address
+  - Cart snapshot
+  - Items snapshot
+  - Payment method
+  - Transaction status
+  - Related order
+
+This project uses Cash on Delivery, so transactions are created to track COD order initiation.
+
+Payment adapter:
+
+  src/payments/cashOnDelivery.ts
+
+
+6.11 Forms and Form Submissions
+-------------------------------
+
+Added by @payloadcms/plugin-form-builder.
+
+Controls:
+
+  - CMS-created forms
+  - Form fields
+  - Confirmation message
+  - Stored form submissions
+
+Frontend block:
+
+  src/blocks/Form/config.ts
+  src/blocks/Form/Component.tsx
+
+Admin access:
+
+  Forms and submissions are admin-only in this project.
+
+
+6.12 Header Global
+------------------
+
+Global file:
+
+  src/globals/Header.ts
+
+Controls:
+
+  - Main navigation links
+  - Internal page links
+  - Custom URLs
+  - Link label
+  - Open in new tab
+
+Frontend files:
+
+  src/components/Header/index.tsx
+  src/components/Header/index.client.tsx
+  src/components/Header/navCategories.ts
+  src/components/Header/MobileMenu.tsx
+
+Important detail:
+
+  The header also pulls published pages where showInNavigation is true and categories with a mainPage relationship.
+
+So top navigation is a merge of:
+
+  - Header global navItems
+  - Published pages marked showInNavigation
+  - Categories connected to those pages
+  - A small default fallback nav list from src/components/Header/navCategories.ts
+
+
+6.13 Footer Global
+------------------
+
+Global file:
+
+  src/globals/Footer.ts
+
+Controls:
+
+  - Footer navigation links
+  - Internal page links
+  - Custom URLs
+  - Link label
+  - Open in new tab
+
+Frontend files:
+
+  src/components/Footer/index.tsx
+  src/components/Footer/menu.tsx
+
+
+7. PAGE BUILDER CONTROLS
+========================
+
+Pages use a layout block field:
+
+  pages.layout
+
+Configured in:
+
+  src/collections/Pages/index.ts
+
+Rendered by:
+
+  src/blocks/RenderBlocks.tsx
+
+Available page blocks:
+
+Hero field:
+
+  File: src/fields/hero.ts
+  Controls:
+    - Hero type: none, highImpact, mediumImpact, lowImpact
+    - Rich text
+    - Up to two links
+    - Media for high/medium impact hero
+
+Hero Carousel:
+
+  File: src/blocks/HeroCarousel/config.ts
+  Controls:
+    - Populate from all media or selected slides
+    - Slide limit
+    - Eyebrow
+    - Heading
+    - Description
+    - CTA label and URL
+    - Content position
+    - Countdown end time
+    - Countdown position
+    - Individual slide images and overrides
+
+FAQ:
+
+  File: src/blocks/FAQ/config.ts
+  Controls:
+    - Heading
+    - Question/answer items
+
+Call To Action:
+
+  File: src/blocks/CallToAction/config.ts
+  Controls:
+    - Rich text
+    - Up to two links
+    - Link appearance: default or outline
+
+Content:
+
+  File: src/blocks/Content/config.ts
+  Controls:
+    - Multiple columns
+    - Column width: one third, half, two thirds, full
+    - Rich text per column
+    - Optional link per column
+
+Media Block:
+
+  File: src/blocks/MediaBlock/config.ts
+  Controls:
+    - Uploaded media item
+
+Archive:
+
+  File: src/blocks/ArchiveBlock/config.ts
+  Controls:
+    - Intro rich text
+    - Product source: collection query or individual selection
+    - Categories
+    - Limit
+
+Carousel:
+
+  File: src/blocks/Carousel/config.ts
+  Controls:
+    - Product source: collection query or individual selection
+    - Categories
+    - Limit
+    - Selected products
+    - Auto-populated docs display
+
+Three Item Grid:
+
+  File: src/blocks/ThreeItemGrid/config.ts
+  Controls:
+    - Exactly three selected products
+    - Sortable relationship order
+
+Banner:
+
+  File: src/blocks/Banner/config.ts
+  Controls:
+    - Style: info, warning, error, success
+    - Rich text content
+
+Form Block:
+
+  File: src/blocks/Form/config.ts
+  Controls:
+    - Select a Payload form
+    - Enable intro content
+    - Intro rich text
+
+
+8. STOREFRONT ROUTE FLOW
+========================
+
+8.1 Global layout
+-----------------
+
+File:
+
+  src/app/(app)/layout.tsx
+
+Responsibilities:
+
+  - Loads fonts
+  - Imports global CSS
+  - Wraps the app in Providers
+  - Adds LivePreviewListener
+  - Renders Header
+  - Renders page content in main
+  - Renders Footer
+
+
+8.2 Home page
+-------------
+
+Files:
+
+  src/app/(app)/page.tsx
+  src/app/(app)/[slug]/page.tsx
+
+Flow:
+
+  - / reuses the dynamic page template.
+  - If no slug is passed, slug defaults to home.
+  - Payload queries pages where slug equals home.
+  - If the DB has not been seeded and home is missing, homeStaticData() is used as temporary fallback.
+  - Page hero, blocks, and category product section render.
+
+
+8.3 Dynamic CMS pages
+---------------------
+
+File:
+
+  src/app/(app)/[slug]/page.tsx
+
+Flow:
+
+  - Slug comes from URL.
+  - Payload queries pages by slug.
+  - Non-preview visitors only get _status = published.
+  - Draft mode can fetch draft content.
+  - Page metadata is generated from Payload SEO fields.
+
+
+8.4 Page category route
+-----------------------
+
+File:
+
+  src/app/(app)/[slug]/[category]/page.tsx
+
+Flow:
+
+  - Finds page by slug.
+  - Finds categories connected to that page.
+  - Confirms requested category slug or ID belongs to that page.
+  - Renders page hero and blocks.
+  - Renders only products connected to the selected category.
+
+
+8.5 Shop page
+-------------
+
+File:
+
+  src/app/(app)/shop/page.tsx
+
+Query params:
+
+  q
+  sort
+  category
+
+Supported sort values:
+
+  title
+  -createdAt
+  priceInPKR
+  -priceInPKR
+  latest maps to -createdAt
+
+Flow:
+
+  - Optional q searches product title and description.
+  - Optional category resolves category by numeric ID or slug.
+  - Products must be published.
+  - Payload returns up to 48 products.
+  - ProductGridItem renders the grid.
+
+
+8.6 Product detail page
+-----------------------
+
+File:
+
+  src/app/(app)/products/[slug]/page.tsx
+
+Flow:
+
+  - Payload queries one product by slug.
+  - Non-preview visitors only get published products.
+  - Depth 3 is used for relationships.
+  - Variants are populated with title, priceInPKR, inventory, and options.
+  - SEO metadata uses product meta image or first gallery image.
+  - Product JSON-LD is injected safely by escaping "<" as "\u003c".
+  - Gallery, description, variants, stock, size chart, color chart, delivery window, and add-to-cart render.
+  - Extra product layout blocks render below the product detail section.
+  - Related products render if selected in Payload.
+
+
+8.7 Account pages
+-----------------
+
+Files:
+
+  src/app/(app)/(account)/layout.tsx
+  src/app/(app)/(account)/account/page.tsx
+  src/app/(app)/(account)/account/addresses/page.tsx
+  src/app/(app)/(account)/orders/page.tsx
+  src/app/(app)/(account)/orders/[id]/page.tsx
+
+Flow:
+
+  - Server reads request headers.
+  - Payload authenticates the user.
+  - If no user, the route redirects to /login with a warning.
+  - Account page displays AccountForm and recent orders.
+  - Addresses page displays saved addresses and a create address modal.
+  - Orders page lists all customer orders.
+  - Order detail validates ownership before rendering.
+
+
+8.8 Auth pages
+--------------
+
+Files:
+
+  src/app/(app)/login/page.tsx
+  src/app/(app)/create-account/page.tsx
+  src/app/(app)/forgot-password/page.tsx
+  src/app/(app)/logout/page.tsx
+  src/providers/Auth/index.tsx
+
+Flow:
+
+  - AuthProvider calls Payload REST auth endpoints.
+  - Login calls /api/users/login.
+  - Logout calls /api/users/logout.
+  - Current user is loaded from /api/users/me.
+  - Create account calls /api/users/create.
+  - Forgot/reset password call Payload user auth endpoints.
+
+
+8.9 Cart flow
+-------------
+
+Files:
+
+  src/providers/index.tsx
+  src/components/Cart/*
+  src/components/Cart/AddToCart.tsx
+
+Flow:
+
+  - EcommerceProvider configures cart query depth and selected populate fields.
+  - AddToCart adds the product and optional selected variant.
+  - Cart modal reads cart items with useCart().
+  - Quantity edits and deletion are handled by ecommerce plugin hooks.
+  - Cart subtotal comes from Payload ecommerce cart data.
+  - Proceed to checkout links to /checkout.
+
+
+8.10 Checkout and Cash on Delivery
+----------------------------------
+
+Files:
+
+  src/app/(app)/checkout/page.tsx
+  src/components/checkout/CheckoutPage.tsx
+  src/payments/cashOnDelivery.ts
+
+Flow:
+
+  - Customer or guest opens /checkout.
+  - If logged in, email comes from user.
+  - If guest, visitor enters email.
+  - Billing address is selected or created.
+  - Shipping can be same as billing or separate.
+  - User clicks "Place cash on delivery order".
+  - Checkout calls initiatePayment('cashOnDelivery').
+  - cashOnDeliveryAdapter creates a transaction.
+  - Checkout calls confirmOrder('cashOnDelivery').
+  - cashOnDeliveryAdapter creates an order, marks cart purchasedAt, links transaction to order.
+  - Cart is cleared.
+  - User is redirected to /orders/[orderID].
+
+Cash on Delivery settings:
+
+  src/lib/ecommerceDefaults.ts
+
+  Currency: PKR
+  Country: Pakistan
+  Payment method: cashOnDelivery
+
+
+8.11 Guest order lookup
+-----------------------
+
+Files:
+
+  src/app/(app)/find-order/page.tsx
+  src/components/forms/FindOrderForm/*
+  src/components/forms/FindOrderForm/sendOrderAccessEmail.ts
+
+Flow:
+
+  - Guest enters email and order ID.
+  - Server action queries orders by ID and customerEmail.
+  - If order exists and has accessToken, an email is sent with a secure order URL.
+  - Function returns success even when no order exists, preventing order enumeration.
+  - Guest order detail requires matching email and accessToken.
+
+
+9. PAYLOAD LOCAL API USAGE
+==========================
+
+This project mostly uses the Payload Local API in server code instead of calling HTTP APIs from server components.
+
+Common pattern:
+
+  const payload = await getPayload({ config: configPromise })
+  const result = await payload.find({
+    collection: 'pages',
+    where: { slug: { equals: slug } },
+  })
+
+Important files using Local API:
+
+  src/app/(app)/[slug]/page.tsx
+  src/app/(app)/[slug]/[category]/page.tsx
+  src/app/(app)/products/[slug]/page.tsx
+  src/app/(app)/shop/page.tsx
+  src/app/(app)/(account)/account/page.tsx
+  src/app/(app)/(account)/orders/page.tsx
+  src/app/(app)/(account)/orders/[id]/page.tsx
+  src/components/Header/index.tsx
+  src/components/Footer/index.tsx
+  src/components/CategoryProductSection/index.tsx
+  src/components/forms/FindOrderForm/sendOrderAccessEmail.ts
+
+Security note:
+
+  Payload Local API bypasses access control by default.
+  When querying on behalf of a real user, this project passes:
+
+    user
+    overrideAccess: false
+
+  This is visible in the account and orders routes.
+
+For public content queries, this project also filters by published status in route logic, for example:
+
+  _status equals published
+
+
+10. CACHING AND REVALIDATION
+============================
+
+Global caching helpers:
+
+  src/utilities/getGlobals.ts
+  src/utilities/getDocument.ts
+
+Header caching:
+
+  src/components/Header/index.tsx
+
+Tags:
+
+  global_header
+  global_footer
+  categories
+  header-pages
+  pages_[slug]
+
+Page revalidation:
+
+  src/collections/Pages/hooks/revalidatePage.ts
+
+Category navigation revalidation:
+
+  src/collections/Categories/hooks/revalidateCategories.ts
+
+Why it matters:
+
+  Storefront pages are server-rendered and cached where possible. When content changes in Payload, hooks invalidate the relevant Next.js cache path or tag so the public site updates without manually rebuilding everything.
+
+
+11. THEME FLOW
+==============
+
+Theme provider:
+
+  src/providers/Theme/index.tsx
+
+CSS variables:
+
+  src/app/(app)/globals.css
+
+Tailwind mapping:
+
+  tailwind.config.mjs
+
+Flow:
+
+  - Theme state is stored in localStorage under payload-theme.
+  - The selected theme is written to the html element as data-theme.
+  - CSS uses:
+
+      [data-theme='light']
+      [data-theme='dark']
+
+  - Tailwind dark variant is configured against [data-theme='dark'].
+  - Theme changes do not require fetching from Payload.
+
+Important variables:
+
+  Base/semantic colors:
+    --color-bg-dominant
+    --color-structure
+    --color-cta-accent
+    --color-surface-primary
+    --color-surface-secondary
+    --color-text-primary
+    --color-text-secondary
+    --color-border-subtle
+
+  Status colors:
+    --color-status-success
+    --color-status-warning
+    --color-status-error
+
+  Notification tokens:
+    --color-notification-bg
+    --color-notification-text
+    --color-notification-border
+
+  Button tokens:
+    --button-primary-bg
+    --button-primary-text
+    --button-secondary-bg
+    --button-secondary-text
+    --button-accent-bg
+    --button-accent-text
+
+  Component aliases:
+    --background
+    --foreground
+    --card
+    --primary
+    --secondary
+    --muted
+    --accent
+    --destructive
+    --border
+    --input
+    --ring
+
+What Payload controls here:
+
+  Payload does not currently control theme colors. Theme tokens are code/CSS controlled.
+
+
+12. SECURITY FLOW
+=================
+
+Main access files:
+
+  src/access/adminOnly.ts
+  src/access/adminOrPublishedStatus.ts
+  src/access/adminOrCustomerOwner.ts
+  src/access/adminOrSelf.ts
+  src/access/isAdmin.ts
+  src/access/isDocumentOwner.ts
+  src/access/adminOnlyFieldAccess.ts
+  src/access/customerOnlyFieldAccess.ts
+
+Important rules:
+
+  - Only admins can create/update/delete pages.
+  - Only admins can create/update/delete categories.
+  - Only admins can create/update/delete media.
+  - Everyone can read public media.
+  - Everyone can read published pages/products.
+  - Draft pages/products require admin preview.
+  - Customers can access only their own account data/orders/addresses.
+  - Guest order access requires email + accessToken.
+
+Anti-XSS and safe rendering:
+
+  - Most content is rendered through React components and typed Payload data.
+  - Product JSON-LD uses dangerouslySetInnerHTML, but JSON is stringified and "<" is escaped.
+  - Rich text content comes from Payload Lexical data and is rendered through project components.
+  - Preview path requires PREVIEW_SECRET and authenticated Payload user.
+
+
+13. ENVIRONMENT VARIABLES
+=========================
+
+Key env vars used by the site:
+
+  DATABASE_URL
+  PAYLOAD_SECRET
+  PREVIEW_SECRET
+  NEXT_PUBLIC_SERVER_URL or deployment URL helpers
+  S3_ENDPOINT
+  S3_ACCESS_KEY_ID
+  S3_SECRET_ACCESS_KEY
+  S3_REGION
+  S3_BUCKET
+  SITE_NAME
+
+Examples live in:
+
+  .env.example
+
+
+14. WHAT IS NOT CONTROLLED BY PAYLOAD
+=====================================
+
+Payload controls content and ecommerce data, but these are code-controlled:
+
+  - Overall visual design and layout implementation
+  - Theme color tokens
+  - Fonts
+  - Header component behavior
+  - Footer component markup outside nav links
+  - Cart modal UI
+  - Checkout UI copy and layout
+  - Payment method implementation logic
+  - Supported currency and supported country
+  - Route structure
+  - Query limits and sort allow-list
+  - Product card design
+  - Account dashboard design
+  - Static fallback home data before seeding
+
+
+15. ADMIN CONTENT WORKFLOW
+==========================
+
+Recommended editor workflow:
+
+1. Log in to /admin with an admin user.
+2. Upload media and set alt text.
+3. Create or edit Pages.
+4. Add hero content and page layout blocks.
+5. Publish the page when ready.
+6. Create categories and connect each category to a main page.
+7. Create products, set price in PKR, inventory, gallery, category relationships, and SEO.
+8. Publish products.
+9. Edit Header/Footer globals for additional navigation links.
+10. Test storefront pages:
+
+    /
+    /shop
+    /products/[slug]
+    /[page-slug]
+    /[page-slug]/[category-slug]
+    /checkout
+
+
+16. CUSTOMER FLOW
+=================
+
+Visitor shopping flow:
+
+1. Visitor lands on home or a CMS page.
+2. Header navigation is built from CMS global links, published pages, and categories.
+3. Visitor opens a category page or shop page.
+4. Product lists are fetched from Payload.
+5. Visitor opens a product detail page.
+6. Product details, images, variants, prices, discounts, inventory, sizes, colors, and related products come from Payload.
+7. Visitor selects a variant if needed.
+8. Visitor adds the product to cart.
+9. Cart is managed through ecommerce plugin client hooks.
+10. Visitor opens checkout.
+11. Visitor logs in or checks out as guest.
+12. Visitor selects/adds address.
+13. Visitor places Cash on Delivery order.
+14. Payload creates transaction and order records.
+15. Visitor lands on the order detail page.
+
+Registered customer account flow:
+
+1. Customer creates account or logs in.
+2. Customer can view account settings.
+3. Customer can manage addresses.
+4. Customer can view orders.
+5. Customer can view individual order details.
+
+Guest order flow:
+
+1. Guest places COD order with email.
+2. Order stores customerEmail and accessToken.
+3. Guest can use /find-order with email and order ID.
+4. Server sends a secure access URL if the order exists.
+5. Guest order page verifies email and accessToken before showing details.
+
+
+17. FOLDER STRUCTURE
+====================
+
+Root:
+
+  .agents/                     Project agent skills and Payload docs
+  .next/                       Next.js build/dev output
+  .vscode/                     Editor settings
+  node_modules/                Installed dependencies
+  public/                      Public static assets and uploaded media
+  src/                         Application source code
+  tests/                       Vitest and Playwright tests
+  .env                         Local environment variables
+  .env.example                 Example environment variables
+  AGENTS.md                    Agent/project instructions
+  components.json              UI component config
+  eslint.config.mjs            ESLint config
+  next.config.ts               Next.js config
+  package.json                 Scripts and dependencies
+  playwright.config.ts         E2E test config
+  pnpm-lock.yaml               Dependency lockfile
+  pnpm-workspace.yaml          PNPM workspace config
+  postcss.config.js            PostCSS config
+  README.md                    Project README
+  redirects.ts                 Redirect config
+  tailwind.config.mjs          Tailwind config and design tokens
+  test.env                     Test environment config
+  tsconfig.json                TypeScript config
+  vitest.config.mts            Integration test config
+  vitest.setup.ts              Test setup
+
+src:
+
+  src/access/                  Payload access-control helpers
+  src/app/                     Next.js App Router routes
+  src/blocks/                  Payload page-builder blocks and renderers
+  src/collections/             Payload collection configs
+  src/components/              Shared frontend components
+  src/endpoints/               Seed data and seed endpoint support
+  src/fields/                  Reusable Payload field configs
+  src/fonts/                   Local font assets
+  src/globals/                 Payload global configs
+  src/heros/                   Hero render components
+  src/hooks/                   Shared hooks
+  src/lib/                     Store constants and ecommerce defaults
+  src/migrations/              Payload database migrations
+  src/payments/                Payment adapter implementation
+  src/plugins/                 Payload plugin setup
+  src/providers/               React providers for auth, cart, theme, notifications
+  src/utilities/               Shared utility functions
+  src/payload.config.ts        Main Payload config
+  src/payload-types.ts         Generated Payload types
+
+src/app:
+
+  src/app/(app)/               Public storefront route group
+  src/app/(payload)/           Payload admin/API route group
+
+src/app/(app):
+
+  layout.tsx                   Public storefront shell
+  globals.css                  Global CSS and theme variables
+  page.tsx                     Home route using dynamic page template
+  not-found.tsx                Storefront 404
+  error.tsx                    Storefront error boundary
+  robots.ts                    Robots route
+  favicon.ico                  Favicon
+  [slug]/page.tsx              Dynamic CMS page
+  [slug]/[category]/page.tsx   CMS page filtered by category
+  shop/page.tsx                Product listing/search page
+  shop/layout.tsx              Shop route layout
+  shop/loading.tsx             Shop loading state
+  products/[slug]/page.tsx     Product detail page
+  checkout/page.tsx            Checkout page
+  checkout/confirm-order       COD confirmation/return page
+  login/page.tsx               Login page
+  logout/page.tsx              Logout page
+  create-account/page.tsx      Create account page
+  forgot-password/page.tsx     Forgot password page
+  find-order/page.tsx          Guest order lookup page
+  (account)/layout.tsx         Account section shell
+  (account)/account/page.tsx   Account settings and recent orders
+  (account)/account/addresses  Customer addresses page
+  (account)/orders/page.tsx    Customer order list
+  (account)/orders/[id]        Customer/guest order detail
+  next/preview/route.ts        Draft preview entry
+  next/exit-preview/route.ts   Draft preview exit
+  next/seed/route.ts           Seed database route
+
+src/app/(payload):
+
+  layout.tsx                         Payload route shell
+  custom.scss                        Payload admin custom styling
+  admin/importMap.js                 Payload admin import map
+  admin/[[...segments]]/page.tsx     Payload admin UI
+  api/[...slug]/route.ts             Payload REST API handlers
+  api/graphql/route.ts               Payload GraphQL handler
+  api/graphql-playground/route.ts    Payload GraphQL Playground
+
+src/collections:
+
+  Users/index.ts               Auth users and roles
+  Users/hooks/                 User hooks
+  Pages/index.ts               CMS pages
+  Pages/hooks/                 Page revalidation hooks
+  Products/index.ts            Ecommerce product override
+  Categories.ts                Product category taxonomy
+  Categories/hooks/            Category revalidation hooks
+  Media.ts                     Upload collection
+
+src/blocks:
+
+  RenderBlocks.tsx             Maps Payload blockType to React component
+  ArchiveBlock/                Product archive block
+  Banner/                      Message/banner block
+  CallToAction/                CTA block
+  Carousel/                    Product carousel block
+  Code/                        Code block
+  Content/                     Multi-column rich text block
+  FAQ/                         FAQ accordion block
+  Form/                        Payload form block and form fields
+  HeroCarousel/                Hero poster carousel block
+  MediaBlock/                  Media display block
+  ThreeItemGrid/               Three product grid block
+
+src/components:
+
+  AccountNav/                  Account sidebar navigation
+  addresses/                   Address listing/item/modal UI
+  AdminBar/                    Admin bar integration
+  BeforeDashboard/             Payload admin dashboard helper
+  BeforeLogin/                 Payload login helper
+  Cart/                        Cart sheet, quantity buttons, add-to-cart
+  CategoryProductSection/      Page/category product section
+  CategoryTabs/                Category tabs UI
+  checkout/                    Checkout and address selection
+  CollectionArchive/           Generic archive rendering
+  Footer/                      Storefront footer
+  forms/                       Account/login/address/find order forms
+  Grid/                        Grid/tile primitives
+  Header/                      Storefront header and navigation
+  icons/                       Logo/icon components
+  layout/search/               Search/filter UI
+  Link/                        CMS-aware link component
+  LivePreviewListener/         Payload live preview listener
+  LoadingSpinner/              Loading spinner
+  Logo/                        Logo component
+  Media/                       Media renderer
+  Message/                     Message component
+  OrderItem/                   Order list item
+  OrderStatus/                 Order status badge
+  product/                     Product page subcomponents
+  ProductGridItem/             Product card
+  ProductItem/                 Order/cart product row
+  RenderParams/                Query param renderer
+  RichText/                    Lexical rich text renderer
+  Search/                      Search component
+  ui/                          Local shadcn-style primitives
+
+src/providers:
+
+  index.tsx                    Composes all providers
+  Auth/                        AuthProvider using Payload user API
+  HeaderTheme/                 Header theme state
+  Sonner.tsx                   Toast provider
+  Theme/                       DOM data-theme provider
+
+tests:
+
+  tests/int/api.int.spec.ts        Integration API tests
+  tests/e2e/frontend.e2e.spec.ts   Storefront Playwright tests
+  tests/e2e/admin.e2e.spec.ts      Admin Playwright tests
+  tests/helpers/                   Test helpers
+
+
+18. IMPORTANT FILES TO EDIT FOR COMMON CHANGES
+==============================================
+
+Add a new CMS page field:
+
+  src/collections/Pages/index.ts
+
+Add a new page-builder block:
+
+  1. Create config/component folder in src/blocks
+  2. Add block config to Pages layout blocks
+  3. Add React component to src/blocks/RenderBlocks.tsx
+
+Change product CMS fields:
+
+  src/collections/Products/index.ts
+
+Change product page UI:
+
+  src/app/(app)/products/[slug]/page.tsx
+  src/components/product/ProductDescription.tsx
+  src/components/product/Gallery.tsx
+
+Change cart behavior:
+
+  src/components/Cart/*
+  src/providers/index.tsx
+
+Change checkout behavior:
+
+  src/components/checkout/CheckoutPage.tsx
+  src/payments/cashOnDelivery.ts
+
+Change currency/country/payment labels:
+
+  src/lib/ecommerceDefaults.ts
+  src/payments/cashOnDelivery.ts
+
+Change navigation rules:
+
+  src/globals/Header.ts
+  src/components/Header/index.tsx
+  src/components/Header/navCategories.ts
+
+Change footer:
+
+  src/globals/Footer.ts
+  src/components/Footer/index.tsx
+  src/components/Footer/menu.tsx
+
+Change theme colors:
+
+  src/app/(app)/globals.css
+  tailwind.config.mjs
+
+Change access/security:
+
+  src/access/*
+  src/collections/*
+  src/plugins/index.ts
+
+
+19. DEVELOPMENT COMMANDS
+========================
+
+Install dependencies:
+
+  pnpm install
+
+Run development server:
+
+  pnpm dev
+
+Build:
+
+  pnpm build
+
+Start production build:
+
+  pnpm start
+
+Generate Payload types:
+
+  pnpm generate:types
+
+Generate Payload admin import map:
+
+  pnpm generate:importmap
+
+Run integration tests:
+
+  pnpm test:int
+
+Run E2E tests:
+
+  pnpm test:e2e
+
+Run all tests:
+
+  pnpm test
+
+
+20. SUMMARY
+===========
+
+Payload controls the store data, page content, navigation data, media, SEO, products, categories, customers, carts, addresses, orders, transactions, and forms.
+
+Next.js controls the route structure, rendering, UI components, theme system, checkout screens, account screens, product page layout, and frontend behavior.
+
+The two sides are linked through:
+
+  src/payload.config.ts
+  @payload-config alias
+  getPayload({ config: configPromise })
+  Payload REST routes under /api
+  Payload ecommerce client hooks
+  Generated types in src/payload-types.ts
+
+The most important mental model:
+
+  Payload is the source of truth for content and commerce records.
+  Next.js is the rendering layer and interaction layer.
+  Server components fetch Payload data directly for fast SSR.
+  Client components use the ecommerce/auth APIs only where live interaction is required.
