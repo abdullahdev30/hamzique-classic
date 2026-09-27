@@ -12,6 +12,8 @@ import React from 'react'
 
 import type { Page } from '@/payload-types'
 import { notFound } from 'next/navigation'
+import { pageTemplates } from '@/templates/pageTemplates'
+import { HomeProductCarousels } from '@/components/HomeProductCarousels'
 
 export async function generateStaticParams() {
   const payload = await getPayload({ config: configPromise })
@@ -75,11 +77,19 @@ export default async function Page({ params, searchParams }: Args) {
   }
 
   const { hero, layout } = page
+  const Template = pageTemplates[page.slug]
 
   return (
     <article>
-      <RenderHero {...hero} />
-      <RenderBlocks blocks={layout} />
+      {Template ? (
+        <Template page={page} />
+      ) : (
+        <>
+          <RenderHero {...hero} />
+          {page.slug === 'home' ? <HomeProductCarousels /> : null}
+          <RenderBlocks blocks={layout} />
+        </>
+      )}
       <CategoryProductSection page={page} selectedCategory={selectedCategory} />
     </article>
   )

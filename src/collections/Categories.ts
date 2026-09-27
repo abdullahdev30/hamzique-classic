@@ -18,7 +18,7 @@ export const Categories: CollectionConfig = {
   admin: {
     useAsTitle: 'title',
     group: 'Content',
-    defaultColumns: ['title', 'mainPage', 'slug'],
+    defaultColumns: ['title', 'mainPage', 'isTopVariant', 'slug'],
   },
   fields: [
     {
@@ -30,12 +30,20 @@ export const Categories: CollectionConfig = {
       label: 'Main page',
       maxDepth: 1,
       relationTo: 'pages',
-      validate: (value: unknown) => Boolean(value) || 'Choose a main page before saving this category.',
+      required: true,
+      validate: (value: unknown) =>
+        Boolean(value) || 'Choose a main page before saving this category.',
     },
     {
       name: 'title',
       type: 'text',
       required: true,
+    },
+    {
+      name: 'isTopVariant',
+      type: 'checkbox',
+      defaultValue: false,
+      label: 'Show at the top of category listings',
     },
     slugField({
       disableUnique: true,

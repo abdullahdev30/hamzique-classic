@@ -27,7 +27,7 @@ export const getCategoriesForPage = async (pageID: number) => {
     limit: 100,
     overrideAccess: false,
     pagination: false,
-    sort: 'title',
+    sort: ['-isTopVariant', 'title'],
     where: {
       mainPage: {
         equals: pageID,
@@ -76,7 +76,7 @@ export const CategoryProductSection = async ({ page, selectedCategory }: Props) 
       discountPercent: true,
       variants: true,
     },
-    sort: '-createdAt',
+    sort: ['-isTopVariant', '-createdAt'],
     where: {
       and: [
         {

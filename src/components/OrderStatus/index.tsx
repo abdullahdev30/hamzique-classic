@@ -14,7 +14,7 @@ export const OrderStatus: React.FC<Props> = ({ status, className }) => {
         className,
         {
           'bg-[var(--color-notification-bg)] text-[var(--color-notification-text)] ring-1 ring-[var(--color-notification-border)]':
-            status === 'processing',
+            status === 'pending',
           'bg-[var(--tag-success-bg)] text-[var(--color-status-success)]': status === 'completed',
         },
       )}

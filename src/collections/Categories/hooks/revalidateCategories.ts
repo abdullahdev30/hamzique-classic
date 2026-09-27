@@ -1,6 +1,6 @@
 import type { CollectionAfterChangeHook, CollectionAfterDeleteHook } from 'payload'
 
-import { revalidateTag } from 'next/cache'
+import { revalidatePath, revalidateTag } from 'next/cache'
 
 import type { Category } from '@/payload-types'
 
@@ -10,6 +10,9 @@ export const revalidateCategoryNavigation: CollectionAfterChangeHook<Category> =
 }) => {
   if (!context.disableRevalidate) {
     revalidateTag('categories', 'max')
+    revalidatePath('/')
+    revalidatePath('/shop')
+    revalidatePath('/[slug]/[categorySlug]', 'page')
   }
 
   return doc
@@ -21,6 +24,9 @@ export const revalidateCategoryNavigationDelete: CollectionAfterDeleteHook<Categ
 }) => {
   if (!context.disableRevalidate) {
     revalidateTag('categories', 'max')
+    revalidatePath('/')
+    revalidatePath('/shop')
+    revalidatePath('/[slug]/[categorySlug]', 'page')
   }
 
   return doc

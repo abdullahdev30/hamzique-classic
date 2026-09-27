@@ -1,6 +1,6 @@
 import { formBuilderPlugin } from '@payloadcms/plugin-form-builder'
 import { seoPlugin } from '@payloadcms/plugin-seo'
-import { Plugin } from 'payload'
+import type { Field, Plugin, SelectField } from 'payload'
 import { GenerateTitle, GenerateURL } from '@payloadcms/plugin-seo/types'
 import { FixedToolbarFeature, HeadingFeature, lexicalEditor } from '@payloadcms/richtext-lexical'
 import { ecommercePlugin } from '@payloadcms/plugin-ecommerce'
@@ -37,6 +37,12 @@ const s3StorageEnabled = Boolean(
   process.env.S3_REGION,
 )
 
+const orderStatusOptions = [
+  { label: 'Pending', value: 'pending' },
+  { label: 'Completed', value: 'completed' },
+  { label: 'Cancelled', value: 'cancelled' },
+]
+
 export const plugins: Plugin[] = [
   s3Storage({
     alwaysInsertFields: true,
@@ -53,6 +59,7 @@ export const plugins: Plugin[] = [
       forcePathStyle: true,
       region: process.env.S3_REGION || 'local',
     },
+    disableLocalStorage: true,
     enabled: s3StorageEnabled,
   }),
   seoPlugin({
@@ -122,8 +129,24 @@ export const plugins: Plugin[] = [
     orders: {
       ordersCollectionOverride: ({ defaultCollection }) => ({
         ...defaultCollection,
+        admin: {
+          ...defaultCollection.admin,
+          defaultColumns: ['createdAt', 'status', 'customerEmail', 'amount'],
+        },
         fields: [
-          ...defaultCollection.fields,
+          ...defaultCollection.fields.map((field): Field => {
+            if ('name' in field && field.name === 'status') {
+              const statusField = field as SelectField
+
+              return {
+                ...statusField,
+                defaultValue: 'pending',
+                options: orderStatusOptions,
+              } as SelectField
+            }
+
+            return field
+          }),
           {
             name: 'accessToken',
             type: 'text',

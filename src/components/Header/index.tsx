@@ -15,7 +15,7 @@ const getCachedHeaderCategories = unstable_cache(
       depth: 1,
       limit: 100,
       pagination: false,
-      sort: 'title',
+      sort: ['-isTopVariant', 'title'],
       where: {
         mainPage: {
           exists: true,

@@ -47,6 +47,7 @@ export const ArchiveBlock: React.FC<
         discountPercent: true,
         variants: true,
       },
+      sort: ['-isTopVariant', '-createdAt'],
       ...(flattenedCategories && flattenedCategories.length > 0
         ? {
             where: {

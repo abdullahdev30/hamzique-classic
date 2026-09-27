@@ -10,7 +10,7 @@
  * This interface was referenced by `Config`'s JSON-Schema
  * via the `definition` "OrderStatus".
  */
-export type OrderStatus = ('processing' | 'completed' | 'cancelled' | 'refunded') | null;
+export type OrderStatus = ('pending' | 'completed' | 'cancelled') | null;
 /**
  * Supported timezones in IANA format.
  *
@@ -210,6 +210,7 @@ export interface User {
   resetPasswordExpiration?: string | null;
   salt?: string | null;
   hash?: string | null;
+  resetPasswordRequestedAt?: string | null;
   loginAttempts?: number | null;
   lockUntil?: string | null;
   sessions?:
@@ -290,13 +291,6 @@ export interface Product {
     | null;
   layout?: (CallToActionBlock | ContentBlock | MediaBlock)[] | null;
   inventory?: number | null;
-  enableVariants?: boolean | null;
-  variantTypes?: (number | VariantType)[] | null;
-  variants?: {
-    docs?: (number | Variant)[];
-    hasNextPage?: boolean;
-    totalDocs?: number;
-  };
   priceInPKREnabled?: boolean | null;
   priceInPKR?: number | null;
   /**
@@ -307,6 +301,9 @@ export interface Product {
    * Optional percentage discount shown on product cards and detail pages.
    */
   discountPercent?: number | null;
+  showImageOnHomePage?: boolean | null;
+  showVideoOnHomePage?: boolean | null;
+  isTopVariant?: boolean | null;
   /**
    * Add each available size and any extra charge for that size.
    */
@@ -336,6 +333,14 @@ export interface Product {
     image?: (number | null) | Media;
     description?: string | null;
   };
+  enableVariants?: boolean | null;
+  variantTypes?: (number | VariantType)[] | null;
+  variants?: {
+    docs?: (number | Variant)[];
+    hasNextPage?: boolean;
+    totalDocs?: number;
+  };
+  pages?: (number | Page)[] | null;
   categories?: (number | Category)[] | null;
   /**
    * When enabled, the slug will auto-generate from the title field on save and autosave.
@@ -370,6 +375,7 @@ export interface Media {
     [k: string]: unknown;
   } | null;
   prefix?: string | null;
+  _objectKey?: string | null;
   updatedAt: string;
   createdAt: string;
   url?: string | null;
@@ -701,8 +707,9 @@ export interface ArchiveBlock {
  */
 export interface Category {
   id: number;
-  mainPage?: (number | null) | Page;
+  mainPage: number | Page;
   title: string;
+  isTopVariant?: boolean | null;
   /**
    * When enabled, the slug will auto-generate from the title field on save and autosave.
    */
@@ -1020,7 +1027,7 @@ export interface Transaction {
     country?: string | null;
     phone?: string | null;
   };
-  status: 'pending' | 'succeeded' | 'failed' | 'cancelled' | 'expired' | 'refunded';
+  status: 'pending' | 'processing' | 'succeeded' | 'failed' | 'cancelled' | 'expired' | 'refunded';
   customer?: (number | null) | User;
   customerEmail?: string | null;
   order?: (number | null) | Order;
@@ -1230,6 +1237,7 @@ export interface UsersSelect<T extends boolean = true> {
   resetPasswordExpiration?: T;
   salt?: T;
   hash?: T;
+  resetPasswordRequestedAt?: T;
   loginAttempts?: T;
   lockUntil?: T;
   sessions?:
@@ -1473,6 +1481,7 @@ export interface FormBlockSelect<T extends boolean = true> {
 export interface CategoriesSelect<T extends boolean = true> {
   mainPage?: T;
   title?: T;
+  isTopVariant?: T;
   generateSlug?: T;
   slug?: T;
   updatedAt?: T;
@@ -1486,6 +1495,7 @@ export interface MediaSelect<T extends boolean = true> {
   alt?: T;
   caption?: T;
   prefix?: T;
+  _objectKey?: T;
   updatedAt?: T;
   createdAt?: T;
   url?: T;
@@ -1730,13 +1740,13 @@ export interface ProductsSelect<T extends boolean = true> {
         mediaBlock?: T | MediaBlockSelect<T>;
       };
   inventory?: T;
-  enableVariants?: T;
-  variantTypes?: T;
-  variants?: T;
   priceInPKREnabled?: T;
   priceInPKR?: T;
   priceTag?: T;
   discountPercent?: T;
+  showImageOnHomePage?: T;
+  showVideoOnHomePage?: T;
+  isTopVariant?: T;
   sizes?:
     | T
     | {
@@ -1759,6 +1769,10 @@ export interface ProductsSelect<T extends boolean = true> {
         image?: T;
         description?: T;
       };
+  enableVariants?: T;
+  variantTypes?: T;
+  variants?: T;
+  pages?: T;
   categories?: T;
   generateSlug?: T;
   slug?: T;

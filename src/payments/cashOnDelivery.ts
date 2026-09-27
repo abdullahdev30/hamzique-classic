@@ -161,7 +161,7 @@ export const cashOnDeliveryAdapter = (): PaymentAdapter => ({
         ...(req.user ? { customer: req.user.id } : { customerEmail }),
         items: transaction.items,
         shippingAddress: data.shippingAddress,
-        status: 'processing',
+        status: 'pending',
         transactions: [transaction.id],
       },
       req,

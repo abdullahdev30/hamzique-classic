@@ -545,7 +545,7 @@ export const seed = async ({
     },
   })
 
-  const orderInProcessing = await payload.create({
+  const orderInPending = await payload.create({
     collection: 'orders',
     data: {
       amount: 7499,
@@ -564,7 +564,7 @@ export const seed = async ({
           quantity: 1,
         },
       ],
-      status: 'processing',
+      status: 'pending',
       transactions: [succeededTransaction.id],
     },
   })

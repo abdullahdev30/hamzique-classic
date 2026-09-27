@@ -18,7 +18,30 @@ import {
   InlineToolbarFeature,
   lexicalEditor,
 } from '@payloadcms/richtext-lexical'
-import { DefaultDocumentIDType, Where } from 'payload'
+import type { DefaultDocumentIDType, Field, Where } from 'payload'
+
+import { revalidateProduct, revalidateProductDelete } from './hooks/revalidateProduct'
+
+type RelationshipValue = DefaultDocumentIDType | { id?: DefaultDocumentIDType } | null | undefined
+
+type ProductFormData = {
+  categories?: RelationshipValue[]
+  pages?: RelationshipValue[]
+}
+
+const getRelationshipIDs = (values?: RelationshipValue[]) =>
+  [
+    ...new Set(
+      (values || [])
+        .map((value) => (typeof value === 'object' ? value?.id : value))
+        .filter(Boolean),
+    ),
+  ] as DefaultDocumentIDType[]
+
+const hasFieldName = (field: Field, name: string) => 'name' in field && field.name === name
+
+const isVariantField = (field: Field) =>
+  ['enableVariants', 'variantTypes', 'variants'].some((name) => hasFieldName(field, name))
 
 export const ProductsCollection: CollectionOverride = ({ defaultCollection }) => ({
   ...defaultCollection,
@@ -55,7 +78,66 @@ export const ProductsCollection: CollectionOverride = ({ defaultCollection }) =>
     sizes: true,
     colorChart: true,
     inventory: true,
+    isTopVariant: true,
+    showImageOnHomePage: true,
+    showVideoOnHomePage: true,
     meta: true,
+  },
+  hooks: {
+    ...defaultCollection.hooks,
+    afterChange: [...(defaultCollection.hooks?.afterChange || []), revalidateProduct],
+    afterDelete: [...(defaultCollection.hooks?.afterDelete || []), revalidateProductDelete],
+    beforeValidate: [
+      ...(defaultCollection.hooks?.beforeValidate || []),
+      async ({ data, originalDoc, req }) => {
+        if (!data) return data
+
+        const productData = data as ProductFormData
+        const categoryIDs = getRelationshipIDs(
+          productData.categories || (originalDoc as ProductFormData)?.categories,
+        )
+        let pageIDs = getRelationshipIDs(
+          productData.pages || (originalDoc as ProductFormData)?.pages,
+        )
+
+        if (!pageIDs.length && categoryIDs.length) {
+          const categories = await req.payload.find({
+            collection: 'categories',
+            depth: 0,
+            limit: categoryIDs.length,
+            overrideAccess: false,
+            pagination: false,
+            where: { id: { in: categoryIDs } },
+          })
+
+          pageIDs = getRelationshipIDs(categories.docs.map((category) => category.mainPage))
+          productData.pages = pageIDs
+        }
+
+        if (!categoryIDs.length) return productData
+
+        if (!pageIDs.length) {
+          throw new Error('Choose at least one page before assigning categories.')
+        }
+
+        const scopedCategories = await req.payload.find({
+          collection: 'categories',
+          depth: 0,
+          limit: categoryIDs.length,
+          overrideAccess: false,
+          pagination: false,
+          where: {
+            and: [{ id: { in: categoryIDs } }, { mainPage: { in: pageIDs } }],
+          },
+        })
+
+        if (scopedCategories.docs.length !== categoryIDs.length) {
+          throw new Error('Each selected category must belong to one of the selected pages.')
+        }
+
+        return productData
+      },
+    ],
   },
   fields: [
     { name: 'title', type: 'text', required: true },
@@ -141,12 +223,7 @@ export const ProductsCollection: CollectionOverride = ({ defaultCollection }) =>
               type: 'blocks',
               blocks: [CallToAction, Content, MediaBlock],
             },
-          ],
-          label: 'Content',
-        },
-        {
-          fields: [
-            ...defaultCollection.fields,
+            ...defaultCollection.fields.filter((field) => !isVariantField(field)),
             {
               name: 'priceTag',
               type: 'text',
@@ -170,6 +247,24 @@ export const ProductsCollection: CollectionOverride = ({ defaultCollection }) =>
               min: 0,
             },
             {
+              name: 'showImageOnHomePage',
+              type: 'checkbox',
+              defaultValue: false,
+              label: 'Show image on home page',
+            },
+            {
+              name: 'showVideoOnHomePage',
+              type: 'checkbox',
+              defaultValue: false,
+              label: 'Show video on home page',
+            },
+            {
+              name: 'isTopVariant',
+              type: 'checkbox',
+              defaultValue: false,
+              label: 'Show at the top of product listings',
+            },
+            {
               name: 'sizes',
               type: 'array',
               admin: {
@@ -177,33 +272,19 @@ export const ProductsCollection: CollectionOverride = ({ defaultCollection }) =>
                 initCollapsed: true,
               },
               fields: [
-                {
-                  name: 'label',
-                  type: 'text',
-                  label: 'Size',
-                  required: true,
-                },
+                { name: 'label', type: 'text', label: 'Size', required: true },
                 {
                   name: 'extraCharge',
                   type: 'number',
-                  admin: {
-                    step: 1,
-                  },
+                  admin: { step: 1 },
                   defaultValue: 0,
                   label: 'Extra charge',
                   min: 0,
                 },
-                {
-                  name: 'notes',
-                  type: 'text',
-                  label: 'Fit notes',
-                },
+                { name: 'notes', type: 'text', label: 'Fit notes' },
               ],
               label: 'Sizes',
-              labels: {
-                plural: 'Sizes',
-                singular: 'Size',
-              },
+              labels: { plural: 'Sizes', singular: 'Size' },
             },
             {
               name: 'colorChart',
@@ -212,83 +293,78 @@ export const ProductsCollection: CollectionOverride = ({ defaultCollection }) =>
                 description: 'Optional colors to display on the product detail page.',
                 initCollapsed: true,
               },
-              fields: [
-                {
-                  name: 'label',
-                  type: 'text',
-                  label: 'Color name',
-                  required: true,
-                },
-              ],
+              fields: [{ name: 'label', type: 'text', label: 'Color name', required: true }],
               label: 'Color chart',
-              labels: {
-                plural: 'Colors',
-                singular: 'Color',
-              },
+              labels: { plural: 'Colors', singular: 'Color' },
             },
             {
               name: 'relatedProducts',
               type: 'relationship',
-              filterOptions: ({ id }) => {
-                if (id) {
-                  return {
-                    id: {
-                      not_in: [id],
-                    },
-                  }
-                }
-
-                // ID comes back as undefined during seeding so we need to handle that case
-                return {
-                  id: {
-                    exists: true,
-                  },
-                }
-              },
+              filterOptions: ({ id }) => (id ? { id: { not_in: [id] } } : { id: { exists: true } }),
               hasMany: true,
               relationTo: 'products',
             },
+            {
+              name: 'meta',
+              type: 'group',
+              label: 'SEO',
+              fields: [
+                OverviewField({
+                  titlePath: 'meta.title',
+                  descriptionPath: 'meta.description',
+                  imagePath: 'meta.image',
+                }),
+                MetaTitleField({ hasGenerateFn: true }),
+                MetaImageField({ relationTo: 'media' }),
+                MetaDescriptionField({}),
+                PreviewField({
+                  hasGenerateFn: true,
+                  titlePath: 'meta.title',
+                  descriptionPath: 'meta.description',
+                }),
+              ],
+            },
           ],
-          label: 'Product Details',
+          label: 'Details',
         },
         {
-          name: 'meta',
-          label: 'SEO',
+          fields: defaultCollection.fields.filter(isVariantField),
+          label: 'Variants',
+        },
+        {
           fields: [
-            OverviewField({
-              titlePath: 'meta.title',
-              descriptionPath: 'meta.description',
-              imagePath: 'meta.image',
-            }),
-            MetaTitleField({
-              hasGenerateFn: true,
-            }),
-            MetaImageField({
-              relationTo: 'media',
-            }),
-
-            MetaDescriptionField({}),
-            PreviewField({
-              // if the `generateUrl` function is configured
-              hasGenerateFn: true,
-
-              // field paths to match the target field for data
-              titlePath: 'meta.title',
-              descriptionPath: 'meta.description',
-            }),
+            {
+              name: 'pages',
+              type: 'relationship',
+              hasMany: true,
+              relationTo: 'pages',
+              admin: { sortOptions: 'title' },
+            },
           ],
+          label: 'Pages',
+        },
+        {
+          fields: [
+            {
+              name: 'categories',
+              type: 'relationship',
+              hasMany: true,
+              relationTo: 'categories',
+              admin: { sortOptions: '-isTopVariant' },
+              filterOptions: ({ siblingData }) => {
+                const pageIDs = getRelationshipIDs((siblingData as ProductFormData)?.pages)
+
+                return pageIDs.length ? { mainPage: { in: pageIDs } } : false
+              },
+            },
+          ],
+          label: 'Categories',
+        },
+        {
+          fields: [],
+          label: 'Publish',
         },
       ],
-    },
-    {
-      name: 'categories',
-      type: 'relationship',
-      admin: {
-        position: 'sidebar',
-        sortOptions: 'title',
-      },
-      hasMany: true,
-      relationTo: 'categories',
     },
     slugField(),
   ],

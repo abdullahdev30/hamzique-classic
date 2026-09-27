@@ -125,7 +125,7 @@ export default async function ShopPage({ searchParams }: Props) {
           discountPercent: true,
           variants: true,
         },
-        sort: sortValue,
+        sort: sortValue === 'title' ? ['-isTopVariant', 'title'] : ['-isTopVariant', sortValue],
         where,
         populate: {
           variants: {
