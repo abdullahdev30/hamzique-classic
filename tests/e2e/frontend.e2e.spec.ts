@@ -1,5 +1,5 @@
+import { expect, Page, test } from '@playwright/test'
 import path from 'path'
-import { test, expect, Page } from '@playwright/test'
 import { fileURLToPath } from 'url'
 
 const filename = fileURLToPath(import.meta.url)
@@ -29,11 +29,11 @@ test.describe('Frontend', () => {
   test('can go on homepage', async ({ page }) => {
     await page.goto(baseURL)
 
-    await expect(page).toHaveTitle(/Payload Ecommerce Template/)
+    await expect(page).toHaveTitle(/Hamzique Classic/)
 
     const heading = page.locator('h1').first()
 
-    await expect(heading).toHaveText('Payload Ecommerce Template')
+    await expect(heading).toHaveText('Hamzique Classic')
   })
 
   test('can sign up and subsequently login', async ({ page }) => {

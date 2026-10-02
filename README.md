@@ -1,8 +1,8 @@
-# Payload Ecommerce Template
+# Hamzique Classic
 
 This template is in **BETA**.
 
-This is the official [Payload Ecommerce Template](https://github.com/payloadcms/payload/blob/3.x/templates/ecommerce). This repo includes a fully-working backend, enterprise-grade admin panel, and a beautifully designed, production-ready ecommerce website.
+This is the official [Hamzique Classic](https://github.com/payloadcms/payload/blob/3.x/templates/ecommerce). This repo includes a fully-working backend, enterprise-grade admin panel, and a beautifully designed, production-ready ecommerce website.
 
 This template is right for you if you are working on building an ecommerce project or shop with Payload.
 

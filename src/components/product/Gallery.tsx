@@ -43,11 +43,12 @@ export const Gallery: React.FC<Props> = ({ gallery }) => {
 
   return (
     <div>
-      <div className="relative w-full overflow-hidden mb-8">
+      <div className="relative mb-8 aspect-square w-full overflow-hidden rounded-lg bg-[var(--color-surface-primary)]">
         <Media
           resource={gallery[visibleIndex].image}
-          className="w-full"
-          imgClassName="w-full rounded-lg"
+          className="h-full w-full"
+          fill
+          imgClassName="h-full w-full object-cover"
         />
       </div>
 

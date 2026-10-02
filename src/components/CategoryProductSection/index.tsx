@@ -19,25 +19,29 @@ const getCategoryHref = (page: Pick<Page, 'slug'>, category: Pick<Category, 'slu
 }
 
 export const getCategoriesForPage = async (pageID: number) => {
-  const payload = await getPayload({ config: configPromise })
+  try {
+    const payload = await getPayload({ config: configPromise })
 
-  return payload.find({
-    collection: 'categories',
-    depth: 0,
-    limit: 100,
-    overrideAccess: false,
-    pagination: false,
-    sort: ['-isTopVariant', 'title'],
-    where: {
-      mainPage: {
-        equals: pageID,
+    return payload.find({
+      collection: 'categories',
+      depth: 0,
+      limit: 100,
+      overrideAccess: false,
+      pagination: false,
+      sort: ['-isTopVariant', 'title'],
+      where: {
+        mainPage: {
+          equals: pageID,
+        },
       },
-    },
-  })
+    })
+  } catch (error) {
+    console.error('Failed to load page categories:', error)
+    return { docs: [] }
+  }
 }
 
 export const CategoryProductSection = async ({ page, selectedCategory }: Props) => {
-  const payload = await getPayload({ config: configPromise })
   const categories = await getCategoriesForPage(page.id)
 
   if (!categories.docs.length) return null
@@ -54,44 +58,52 @@ export const CategoryProductSection = async ({ page, selectedCategory }: Props) 
     ? [activeCategory.id]
     : categories.docs.map((category) => category.id)
 
-  const products = await payload.find({
-    collection: 'products',
-    depth: 1,
-    draft: false,
-    limit: 24,
-    overrideAccess: false,
-    pagination: false,
-    populate: {
-      variants: {
-        priceInPKR: true,
+  let products
+
+  try {
+    const payload = await getPayload({ config: configPromise })
+    products = await payload.find({
+      collection: 'products',
+      depth: 1,
+      draft: false,
+      limit: 24,
+      overrideAccess: false,
+      pagination: false,
+      populate: {
+        variants: {
+          priceInPKR: true,
+        },
       },
-    },
-    select: {
-      title: true,
-      slug: true,
-      gallery: true,
-      categories: true,
-      priceInPKR: true,
-      priceTag: true,
-      discountPercent: true,
-      variants: true,
-    },
-    sort: ['-isTopVariant', '-createdAt'],
-    where: {
-      and: [
-        {
-          _status: {
-            equals: 'published',
+      select: {
+        title: true,
+        slug: true,
+        gallery: true,
+        categories: true,
+        priceInPKR: true,
+        priceTag: true,
+        discountPercent: true,
+        variants: true,
+      },
+      sort: ['-isTopVariant', '-createdAt'],
+      where: {
+        and: [
+          {
+            _status: {
+              equals: 'published',
+            },
           },
-        },
-        {
-          categories: {
-            in: categoryIDs,
+          {
+            categories: {
+              in: categoryIDs,
+            },
           },
-        },
-      ],
-    },
-  })
+        ],
+      },
+    })
+  } catch (error) {
+    console.error('Failed to load category products:', error)
+    return null
+  }
 
   const pageHref = getPageHref(page)
 

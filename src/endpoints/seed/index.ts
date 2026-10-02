@@ -642,6 +642,8 @@ export const seed = async ({
     payload.updateGlobal({
       slug: 'footer',
       data: {
+        address:
+          'Andaaz Fashion\nUnit 10 Watchmoor Trade Centre\nWatchmoor rd, Camberley\nSurrey GU15 3AJ\nUnited Kingdom',
         navItems: [
           {
             link: {
@@ -669,6 +671,36 @@ export const seed = async ({
               type: 'custom',
               label: 'Help',
               url: '/contact',
+            },
+          },
+        ],
+        infoItems: [
+          {
+            link: {
+              type: 'custom',
+              label: 'About Us',
+              url: '/about-us',
+            },
+          },
+          {
+            link: {
+              type: 'custom',
+              label: 'Privacy Policy',
+              url: '/privacy-policy',
+            },
+          },
+          {
+            link: {
+              type: 'custom',
+              label: 'Terms and Conditions',
+              url: '/terms-and-conditions',
+            },
+          },
+          {
+            link: {
+              type: 'custom',
+              label: 'FAQs',
+              url: '/#faq',
             },
           },
         ],

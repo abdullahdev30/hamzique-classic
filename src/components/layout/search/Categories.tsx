@@ -7,12 +7,19 @@ import { FilterList } from './filter'
 import { CategoryItem } from './Categories.client'
 
 async function CategoryList() {
-  const payload = await getPayload({ config: configPromise })
+  let categories
 
-  const categories = await payload.find({
-    collection: 'categories',
-    sort: ['-isTopVariant', 'title'],
-  })
+  try {
+    const payload = await getPayload({ config: configPromise })
+
+    categories = await payload.find({
+      collection: 'categories',
+      sort: ['-isTopVariant', 'title'],
+    })
+  } catch (error) {
+    console.error('Failed to load shop categories:', error)
+    return null
+  }
 
   return (
     <div>

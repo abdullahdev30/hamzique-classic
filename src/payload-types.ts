@@ -75,6 +75,7 @@ export interface Config {
     users: User;
     pages: Page;
     categories: Category;
+    'customer-comments': CustomerComment;
     media: Media;
     forms: Form;
     'form-submissions': FormSubmission;
@@ -108,6 +109,7 @@ export interface Config {
     users: UsersSelect<false> | UsersSelect<true>;
     pages: PagesSelect<false> | PagesSelect<true>;
     categories: CategoriesSelect<false> | CategoriesSelect<true>;
+    'customer-comments': CustomerCommentsSelect<false> | CustomerCommentsSelect<true>;
     media: MediaSelect<false> | MediaSelect<true>;
     forms: FormsSelect<false> | FormsSelect<true>;
     'form-submissions': FormSubmissionsSelect<false> | FormSubmissionsSelect<true>;
@@ -518,20 +520,28 @@ export interface Page {
           id?: string | null;
         }[]
       | null;
+    /**
+     * Optional. Leave empty to show the page without hero media.
+     */
     media?: (number | null) | Media;
   };
-  layout: (
-    | HeroCarouselBlock
-    | FAQBlock
-    | CallToActionBlock
-    | ContentBlock
-    | MediaBlock
-    | ArchiveBlock
-    | CarouselBlock
-    | ThreeItemGridBlock
-    | BannerBlock
-    | FormBlock
-  )[];
+  /**
+   * Optional. Leave this empty to show only the products assigned to this page.
+   */
+  layout?:
+    | (
+        | HeroCarouselBlock
+        | FAQBlock
+        | CallToActionBlock
+        | ContentBlock
+        | MediaBlock
+        | ArchiveBlock
+        | CarouselBlock
+        | ThreeItemGridBlock
+        | BannerBlock
+        | FormBlock
+      )[]
+    | null;
   meta?: {
     title?: string | null;
     /**
@@ -1083,6 +1093,24 @@ export interface Address {
 }
 /**
  * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "customer-comments".
+ */
+export interface CustomerComment {
+  id: number;
+  customerName: string;
+  quote: string;
+  /**
+   * Shown as stars on the storefront.
+   */
+  rating: number;
+  image: number | Media;
+  sortOrder?: number | null;
+  updatedAt: string;
+  createdAt: string;
+  _status?: ('draft' | 'published') | null;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
  * via the `definition` "form-submissions".
  */
 export interface FormSubmission {
@@ -1133,6 +1161,10 @@ export interface PayloadLockedDocument {
     | ({
         relationTo: 'categories';
         value: number | Category;
+      } | null)
+    | ({
+        relationTo: 'customer-comments';
+        value: number | CustomerComment;
       } | null)
     | ({
         relationTo: 'media';
@@ -1486,6 +1518,20 @@ export interface CategoriesSelect<T extends boolean = true> {
   slug?: T;
   updatedAt?: T;
   createdAt?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "customer-comments_select".
+ */
+export interface CustomerCommentsSelect<T extends boolean = true> {
+  customerName?: T;
+  quote?: T;
+  rating?: T;
+  image?: T;
+  sortOrder?: T;
+  updatedAt?: T;
+  createdAt?: T;
+  _status?: T;
 }
 /**
  * This interface was referenced by `Config`'s JSON-Schema
@@ -1955,7 +2001,26 @@ export interface Header {
  */
 export interface Footer {
   id: number;
+  /**
+   * Shown below the logo in the first footer column.
+   */
+  address?: string | null;
   navItems?:
+    | {
+        link: {
+          type?: ('reference' | 'custom') | null;
+          newTab?: boolean | null;
+          reference?: {
+            relationTo: 'pages';
+            value: number | Page;
+          } | null;
+          url?: string | null;
+          label: string;
+        };
+        id?: string | null;
+      }[]
+    | null;
+  infoItems?:
     | {
         link: {
           type?: ('reference' | 'custom') | null;
@@ -2001,7 +2066,22 @@ export interface HeaderSelect<T extends boolean = true> {
  * via the `definition` "footer_select".
  */
 export interface FooterSelect<T extends boolean = true> {
+  address?: T;
   navItems?:
+    | T
+    | {
+        link?:
+          | T
+          | {
+              type?: T;
+              newTab?: T;
+              reference?: T;
+              url?: T;
+              label?: T;
+            };
+        id?: T;
+      };
+  infoItems?:
     | T
     | {
         link?:

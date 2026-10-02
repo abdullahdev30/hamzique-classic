@@ -25,6 +25,7 @@ export const Image: React.FC<MediaProps> = (props) => {
     resource,
     size: sizeFromProps,
     src: srcFromProps,
+    unoptimized: unoptimizedFromProps,
     width: widthFromProps,
   } = props
 
@@ -59,6 +60,9 @@ export const Image: React.FC<MediaProps> = (props) => {
     : Object.entries(breakpoints)
         .map(([, value]) => `(max-width: ${value}px) ${value}px`)
         .join(', ')
+  const srcString = typeof src === 'string' ? src : ''
+  const unoptimized =
+    unoptimizedFromProps || srcString.startsWith('/api/media/file/') || srcString.includes('/api/media/file/')
 
   return (
     <NextImage
@@ -77,6 +81,7 @@ export const Image: React.FC<MediaProps> = (props) => {
       quality={90}
       sizes={sizes}
       src={src}
+      unoptimized={unoptimized}
       width={!fill ? width || widthFromProps : undefined}
     />
   )

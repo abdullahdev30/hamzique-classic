@@ -25,11 +25,13 @@ export const ProductGridItem: React.FC<Props> = ({ product }) => {
           {image ? (
             <Media
               className="relative h-full w-full"
+              fill
               height={480}
               imgClassName={clsx('h-full w-full object-cover', {
                 'transition duration-300 ease-in-out group-hover:scale-105': true,
               })}
               resource={image}
+              size="(min-width: 1024px) 33vw, (min-width: 640px) 50vw, 100vw"
               width={480}
             />
           ) : null}

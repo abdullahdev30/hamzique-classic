@@ -17,36 +17,41 @@ type Args = {
 }
 
 export async function generateStaticParams() {
-  const payload = await getPayload({ config: configPromise })
-  const categories = await payload.find({
-    collection: 'categories',
-    depth: 1,
-    limit: 1000,
-    overrideAccess: false,
-    pagination: false,
-    select: {
-      mainPage: true,
-      slug: true,
-    },
-    where: {
-      mainPage: {
-        exists: true,
+  try {
+    const payload = await getPayload({ config: configPromise })
+    const categories = await payload.find({
+      collection: 'categories',
+      depth: 1,
+      limit: 1000,
+      overrideAccess: false,
+      pagination: false,
+      select: {
+        mainPage: true,
+        slug: true,
       },
-    },
-  })
-
-  return categories.docs
-    .map((category) => {
-      const mainPage = typeof category.mainPage === 'object' ? category.mainPage : null
-
-      if (!mainPage?.slug || mainPage.slug === 'home') return null
-
-      return {
-        category: category.slug,
-        slug: mainPage.slug,
-      }
+      where: {
+        mainPage: {
+          exists: true,
+        },
+      },
     })
-    .filter((param): param is { category: string; slug: string } => Boolean(param))
+
+    return categories.docs
+      .map((category) => {
+        const mainPage = typeof category.mainPage === 'object' ? category.mainPage : null
+
+        if (!mainPage?.slug || mainPage.slug === 'home') return null
+
+        return {
+          category: category.slug,
+          slug: mainPage.slug,
+        }
+      })
+      .filter((param): param is { category: string; slug: string } => Boolean(param))
+  } catch (error) {
+    console.error('Failed to generate category static params:', error)
+    return []
+  }
 }
 
 export async function generateMetadata({ params }: Args): Promise<Metadata> {
@@ -85,45 +90,53 @@ const queryPageAndCategory = async ({
   categorySlug: string
   slug: string
 }) => {
-  const { isEnabled: draft } = await draftMode()
-  const payload = await getPayload({ config: configPromise })
+  try {
+    const { isEnabled: draft } = await draftMode()
+    const payload = await getPayload({ config: configPromise })
 
-  const pageResult = await payload.find({
-    collection: 'pages',
-    depth: 1,
-    draft,
-    limit: 1,
-    overrideAccess: draft,
-    pagination: false,
-    where: {
-      and: [
-        {
-          slug: {
-            equals: slug,
+    const pageResult = await payload.find({
+      collection: 'pages',
+      depth: 1,
+      draft,
+      limit: 1,
+      overrideAccess: draft,
+      pagination: false,
+      where: {
+        and: [
+          {
+            slug: {
+              equals: slug,
+            },
           },
-        },
-        ...(draft ? [] : [{ _status: { equals: 'published' } }]),
-      ],
-    },
-  })
+          ...(draft ? [] : [{ _status: { equals: 'published' } }]),
+        ],
+      },
+    })
 
-  const page = pageResult.docs[0]
+    const page = pageResult.docs[0]
 
-  if (!page) {
+    if (!page) {
+      return {
+        category: null,
+        page: null,
+      }
+    }
+
+    const categories = await getCategoriesForPage(page.id)
+    const category =
+      categories.docs.find(
+        (doc: Category) => doc.slug === categorySlug || String(doc.id) === categorySlug,
+      ) || null
+
+    return {
+      category,
+      page,
+    }
+  } catch (error) {
+    console.error(`Failed to load category page "${slug}/${categorySlug}":`, error)
     return {
       category: null,
       page: null,
     }
-  }
-
-  const categories = await getCategoriesForPage(page.id)
-  const category =
-    categories.docs.find(
-      (doc: Category) => doc.slug === categorySlug || String(doc.id) === categorySlug,
-    ) || null
-
-  return {
-    category,
-    page,
   }
 }

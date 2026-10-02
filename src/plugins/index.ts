@@ -1,25 +1,25 @@
+import { ecommercePlugin } from '@payloadcms/plugin-ecommerce'
 import { formBuilderPlugin } from '@payloadcms/plugin-form-builder'
 import { seoPlugin } from '@payloadcms/plugin-seo'
-import type { Field, Plugin, SelectField } from 'payload'
 import { GenerateTitle, GenerateURL } from '@payloadcms/plugin-seo/types'
 import { FixedToolbarFeature, HeadingFeature, lexicalEditor } from '@payloadcms/richtext-lexical'
-import { ecommercePlugin } from '@payloadcms/plugin-ecommerce'
 import { s3Storage } from '@payloadcms/storage-s3'
+import type { Field, Plugin, SelectField } from 'payload'
 
-import { Media } from '@/collections/Media'
-import { Page, Product } from '@/payload-types'
-import { getServerSideURL } from '@/utilities/getURL'
-import { ProductsCollection } from '@/collections/Products'
-import { adminOrPublishedStatus } from '@/access/adminOrPublishedStatus'
 import { adminOnlyFieldAccess } from '@/access/adminOnlyFieldAccess'
+import { adminOrPublishedStatus } from '@/access/adminOrPublishedStatus'
 import { customerOnlyFieldAccess } from '@/access/customerOnlyFieldAccess'
 import { isAdmin } from '@/access/isAdmin'
 import { isDocumentOwner } from '@/access/isDocumentOwner'
+import { Media } from '@/collections/Media'
+import { ProductsCollection } from '@/collections/Products'
 import { CURRENCIES_CONFIG, SUPPORTED_COUNTRIES } from '@/lib/ecommerceDefaults'
+import { Page, Product } from '@/payload-types'
 import { cashOnDeliveryAdapter } from '@/payments/cashOnDelivery'
+import { getServerSideURL } from '@/utilities/getURL'
 
 const generateTitle: GenerateTitle<Product | Page> = ({ doc }) => {
-  return doc?.title ? `${doc.title} | Payload Ecommerce Template` : 'Payload Ecommerce Template'
+  return doc?.title ? `${doc.title} | Hamzique Classic` : 'Hamzique Classic'
 }
 
 const generateURL: GenerateURL<Product | Page> = ({ doc }) => {

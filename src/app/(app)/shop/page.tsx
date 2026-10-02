@@ -44,8 +44,16 @@ export default async function ShopPage({ searchParams }: Props) {
   const searchValue = normalizeSearchParam(q)
   const categoryParam = normalizeSearchParam(category, 64)
   const sortValue = getSortValue(sort)
-  const payload = await getPayload({ config: configPromise })
   let categoryID: number | undefined
+  let payload
+
+  try {
+    payload = await getPayload({ config: configPromise })
+  } catch (error) {
+    console.error('Failed to connect to Payload for shop page:', error)
+
+    return <p className="mb-4">No products found. Please try again soon.</p>
+  }
 
   if (categoryParam) {
     if (/^\d+$/.test(categoryParam)) {

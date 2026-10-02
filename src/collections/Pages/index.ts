@@ -132,7 +132,10 @@ export const Pages: CollectionConfig = {
                 Banner,
                 FormBlock,
               ],
-              required: true,
+              admin: {
+                description:
+                  'Optional. Leave this empty to show only the products assigned to this page.',
+              },
             },
           ],
           label: 'Content',

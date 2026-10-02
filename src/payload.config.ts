@@ -15,6 +15,7 @@ import { buildConfig } from 'payload'
 import { fileURLToPath } from 'url'
 
 import { Categories } from '@/collections/Categories'
+import { CustomerComments } from '@/collections/CustomerComments'
 import { Media } from '@/collections/Media'
 import { Pages } from '@/collections/Pages'
 import { Users } from '@/collections/Users'
@@ -24,6 +25,7 @@ import { plugins } from './plugins'
 
 const filename = fileURLToPath(import.meta.url)
 const dirname = path.dirname(filename)
+const databasePoolMax = Math.max(Number(process.env.DATABASE_POOL_MAX || 5), 5)
 
 export default buildConfig({
   admin: {
@@ -37,12 +39,13 @@ export default buildConfig({
     },
     user: Users.slug,
   },
-  collections: [Users, Pages, Categories, Media],
+  collections: [Users, Pages, Categories, CustomerComments, Media],
   db: postgresAdapter({
     pool: {
       connectionString: process.env.DATABASE_URL || '',
+      max: databasePoolMax,
     },
-    push: true,
+    push: false,
   }),
   editor: lexicalEditor({
     features: () => {
