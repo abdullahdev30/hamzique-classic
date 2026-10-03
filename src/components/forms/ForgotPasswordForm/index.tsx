@@ -19,27 +19,26 @@ export const ForgotPasswordForm: React.FC = () => {
   const [success, setSuccess] = useState(false)
 
   const {
-    formState: { errors },
+    formState: { errors, isSubmitting },
     handleSubmit,
     register,
   } = useForm<FormData>()
 
   const onSubmit = useCallback(async (data: FormData) => {
-    const response = await fetch(
-      `${process.env.NEXT_PUBLIC_SERVER_URL}/api/users/forgot-password`,
-      {
+    try {
+      const response = await fetch('/api/users/forgot-password', {
         body: JSON.stringify(data),
         headers: {
           'Content-Type': 'application/json',
         },
         method: 'POST',
-      },
-    )
+      })
 
-    if (response.ok) {
+      if (!response.ok) throw new Error('Password reset request failed.')
+
       setSuccess(true)
       setError('')
-    } else {
+    } catch {
       setError(
         'There was a problem while attempting to send you a password reset email. Please try again.',
       )
@@ -73,8 +72,8 @@ export const ForgotPasswordForm: React.FC = () => {
               {errors.email && <FormError message={errors.email.message} />}
             </FormItem>
 
-            <Button type="submit" variant="default">
-              Forgot Password
+            <Button disabled={isSubmitting} type="submit" variant="default">
+              {isSubmitting ? 'Sending...' : 'Send reset link'}
             </Button>
           </form>
         </React.Fragment>

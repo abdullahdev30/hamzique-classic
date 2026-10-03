@@ -1,5 +1,6 @@
 import type { PaymentAdapter } from '@payloadcms/plugin-ecommerce/types'
-import type { Transaction } from '@/payload-types'
+import type { Order, Transaction } from '@/payload-types'
+import { sendOrderEmailSafely } from '@/emails/orderEmail'
 
 type CartItemSnapshot = {
   id?: string
@@ -10,6 +11,15 @@ type CartItemSnapshot = {
 }
 
 const paymentMethodName = 'cashOnDelivery'
+
+const getRelationshipID = (value: unknown): number | string | null => {
+  if (typeof value === 'number' || typeof value === 'string') return value
+  if (value && typeof value === 'object' && 'id' in value) {
+    const id = value.id
+    return typeof id === 'number' || typeof id === 'string' ? id : null
+  }
+  return null
+}
 
 const flattenCartItems = (items: CartItemSnapshot[]) => {
   return items.map((item) => {
@@ -55,6 +65,7 @@ export const cashOnDeliveryAdapter = (): PaymentAdapter => ({
   },
   initiatePayment: async ({ data, req, transactionsSlug }) => {
     const { billingAddress, cart, currency, customerEmail } = data
+    const resolvedCustomerEmail = customerEmail || req.user?.email
     const amount = cart.subtotal
     const transactionsCollection = transactionsSlug as 'transactions'
 
@@ -66,7 +77,7 @@ export const cashOnDeliveryAdapter = (): PaymentAdapter => ({
       throw new Error('Cart is empty or not provided.')
     }
 
-    if (!customerEmail || typeof customerEmail !== 'string') {
+    if (!resolvedCustomerEmail || typeof resolvedCustomerEmail !== 'string') {
       throw new Error('A valid customer email is required to make a purchase.')
     }
 
@@ -79,7 +90,8 @@ export const cashOnDeliveryAdapter = (): PaymentAdapter => ({
     const transaction = await req.payload.create({
       collection: transactionsCollection,
       data: {
-        ...(req.user ? { customer: req.user.id } : { customerEmail }),
+        ...(req.user ? { customer: req.user.id } : {}),
+        customerEmail: resolvedCustomerEmail,
         amount,
         billingAddress,
         cart: cart.id,
@@ -99,18 +111,10 @@ export const cashOnDeliveryAdapter = (): PaymentAdapter => ({
       transactionID: transaction.id,
     }
   },
-  confirmOrder: async ({
-    cartsSlug = 'carts',
-    data,
-    ordersSlug = 'orders',
-    req,
-    transactionsSlug = 'transactions',
-  }) => {
+  confirmOrder: async ({ data, finalizeOrder, req, transactionsSlug = 'transactions' }) => {
     const transactionID = data.transactionID
     const cartID = data.cartID
     const customerEmail = data.customerEmail
-    const cartsCollection = cartsSlug as 'carts'
-    const ordersCollection = ordersSlug as 'orders'
     const transactionsCollection = transactionsSlug as 'transactions'
 
     if (typeof cartID !== 'string' && typeof cartID !== 'number') {
@@ -153,37 +157,57 @@ export const cashOnDeliveryAdapter = (): PaymentAdapter => ({
       throw new Error('No cash on delivery transaction was found for this cart.')
     }
 
-    const order = await req.payload.create({
-      collection: ordersCollection,
-      data: {
+    if (typeof finalizeOrder !== 'function') {
+      throw new Error('The core order finalizer is required for cash on delivery.')
+    }
+
+    if (transaction.paymentMethod !== paymentMethodName) {
+      throw new Error('The transaction is not a cash on delivery transaction.')
+    }
+
+    if (String(getRelationshipID(transaction.cart)) !== String(cartID)) {
+      throw new Error('The transaction does not belong to this cart.')
+    }
+
+    const transactionCustomerID = getRelationshipID(transaction.customer)
+    if (req.user && String(transactionCustomerID) !== String(req.user.id)) {
+      throw new Error('The transaction does not belong to this customer.')
+    }
+
+    const resolvedCustomerEmail =
+      customerEmail ||
+      transaction.customerEmail ||
+      (transaction.customer && typeof transaction.customer === 'object'
+        ? transaction.customer.email
+        : null) ||
+      req.user?.email
+
+    if (
+      !req.user &&
+      (!resolvedCustomerEmail ||
+        resolvedCustomerEmail.trim().toLowerCase() !== String(customerEmail).trim().toLowerCase())
+    ) {
+      throw new Error('The transaction customer email does not match this order.')
+    }
+
+    const order = (await finalizeOrder({
+      orderData: {
         amount: transaction.amount,
         currency: transaction.currency,
-        ...(req.user ? { customer: req.user.id } : { customerEmail }),
+        ...(req.user ? { customer: req.user.id } : {}),
+        ...(resolvedCustomerEmail ? { customerEmail: resolvedCustomerEmail } : {}),
         items: transaction.items,
         shippingAddress: data.shippingAddress,
         status: 'pending',
-        transactions: [transaction.id],
       },
-      req,
-    })
+      transactionID: transaction.id,
+    })) as unknown as Order
 
-    await req.payload.update({
-      id: cartID,
-      collection: cartsCollection,
-      data: {
-        purchasedAt: new Date().toISOString(),
-      },
-      req,
-    })
-
-    await req.payload.update({
-      id: transaction.id,
-      collection: transactionsCollection,
-      data: {
-        order: order.id,
-        status: 'pending',
-      },
-      req,
+    await sendOrderEmailSafely({
+      order,
+      payload: req.payload,
+      recipient: resolvedCustomerEmail,
+      type: 'confirmation',
     })
 
     return {

@@ -12,6 +12,7 @@ import { customerOnlyFieldAccess } from '@/access/customerOnlyFieldAccess'
 import { isAdmin } from '@/access/isAdmin'
 import { isDocumentOwner } from '@/access/isDocumentOwner'
 import { Media } from '@/collections/Media'
+import { sendCompletedOrderEmail } from '@/collections/Orders/hooks/sendCompletedOrderEmail'
 import { ProductsCollection } from '@/collections/Products'
 import { CURRENCIES_CONFIG, SUPPORTED_COUNTRIES } from '@/lib/ecommerceDefaults'
 import { Page, Product } from '@/payload-types'
@@ -39,7 +40,7 @@ const s3StorageEnabled = Boolean(
 
 const orderStatusOptions = [
   { label: 'Pending', value: 'pending' },
-  { label: 'Completed', value: 'completed' },
+  { label: 'Delivered / Completed', value: 'completed' },
   { label: 'Cancelled', value: 'cancelled' },
 ]
 
@@ -132,6 +133,10 @@ export const plugins: Plugin[] = [
         admin: {
           ...defaultCollection.admin,
           defaultColumns: ['createdAt', 'status', 'customerEmail', 'amount'],
+        },
+        hooks: {
+          ...defaultCollection.hooks,
+          afterChange: [...(defaultCollection.hooks?.afterChange || []), sendCompletedOrderEmail],
         },
         fields: [
           ...defaultCollection.fields.map((field): Field => {

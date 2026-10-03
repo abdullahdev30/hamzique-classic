@@ -9,6 +9,10 @@ import { Playfair_Display, Plus_Jakarta_Sans, Poppins, Tangerine } from 'next/fo
 import React from 'react'
 import './globals.css'
 
+// The storefront depends on live Payload content and is rendered with SSR. This keeps
+// database work out of Vercel's build phase and serves the current published content.
+export const dynamic = 'force-dynamic'
+
 /* const { SITE_NAME, TWITTER_CREATOR, TWITTER_SITE } = process.env
 const baseUrl = process.env.NEXT_PUBLIC_VERCEL_URL
   ? `https://${process.env.NEXT_PUBLIC_VERCEL_URL}`

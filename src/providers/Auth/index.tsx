@@ -160,14 +160,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       })
 
       if (res.ok) {
-        const { data, errors } = await res.json()
+        const { errors } = await res.json()
         if (errors) throw new Error(errors[0].message)
-        setUser(data?.loginUser?.user)
       } else {
-        throw new Error('Invalid login')
+        throw new Error('Unable to request a password reset.')
       }
     } catch (e) {
-      throw new Error('An error occurred while attempting to login.')
+      throw new Error('An error occurred while requesting a password reset.')
     }
   }, [])
 
@@ -187,15 +186,15 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       })
 
       if (res.ok) {
-        const { data, errors } = await res.json()
+        const { errors, user: resetUser } = await res.json()
         if (errors) throw new Error(errors[0].message)
-        setUser(data?.loginUser?.user)
-        setStatus(data?.loginUser?.user ? 'loggedIn' : undefined)
+        setUser(resetUser || null)
+        setStatus(resetUser ? 'loggedIn' : undefined)
       } else {
-        throw new Error('Invalid login')
+        throw new Error('The reset link is invalid or has expired.')
       }
     } catch (e) {
-      throw new Error('An error occurred while attempting to login.')
+      throw new Error('The reset link is invalid or has expired.')
     }
   }, [])
 

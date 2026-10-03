@@ -5,6 +5,7 @@ import { adminOnlyFieldAccess } from '@/access/adminOnlyFieldAccess'
 import { publicAccess } from '@/access/publicAccess'
 import { adminOrSelf } from '@/access/adminOrSelf'
 import { checkRole } from '@/access/utilities'
+import { buildPasswordResetEmailHTML } from '@/emails/passwordResetEmail'
 
 import { ensureFirstUserIsAdmin } from './hooks/ensureFirstUserIsAdmin'
 
@@ -24,6 +25,11 @@ export const Users: CollectionConfig = {
     useAsTitle: 'name',
   },
   auth: {
+    forgotPassword: {
+      expiration: 60 * 60 * 1000,
+      generateEmailHTML: (args) => buildPasswordResetEmailHTML(args?.token),
+      generateEmailSubject: () => 'Reset your Hamzique Classic password',
+    },
     tokenExpiration: 1209600,
   },
   fields: [

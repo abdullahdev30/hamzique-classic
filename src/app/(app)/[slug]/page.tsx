@@ -16,7 +16,13 @@ import { pageTemplates } from '@/templates/pageTemplates'
 import { HomeProductCarousels } from '@/components/HomeProductCarousels'
 import { StaticInfoPage, staticInfoPages } from '@/components/StaticInfoPage'
 
+export const dynamic = 'force-dynamic'
+
 export async function generateStaticParams() {
+  // Payload content is rendered on demand in serverless deployments. This avoids opening
+  // build-time database sessions against Supabase's limited session pool.
+  if (process.env.VERCEL || process.env.SKIP_STATIC_GENERATION === 'true') return []
+
   try {
     const payload = await getPayload({ config: configPromise })
     const pages = await payload.find({

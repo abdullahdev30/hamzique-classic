@@ -1,4 +1,5 @@
 import { postgresAdapter } from '@payloadcms/db-postgres'
+import { nodemailerAdapter } from '@payloadcms/email-nodemailer'
 import {
   BoldFeature,
   EXPERIMENTAL_TableFeature,
@@ -21,11 +22,46 @@ import { Pages } from '@/collections/Pages'
 import { Users } from '@/collections/Users'
 import { Footer } from '@/globals/Footer'
 import { Header } from '@/globals/Header'
+import { getAllowedOrigins, getServerSideURL } from '@/utilities/getURL'
 import { plugins } from './plugins'
 
 const filename = fileURLToPath(import.meta.url)
 const dirname = path.dirname(filename)
-const databasePoolMax = Math.max(Number(process.env.DATABASE_POOL_MAX || 5), 5)
+const usesSupabaseTransactionPooler = process.env.USE_SUPABASE_TRANSACTION_POOLER === 'true'
+const minimumPoolMax = usesSupabaseTransactionPooler ? 5 : 2
+const configuredPoolMax = Number(process.env.DATABASE_POOL_MAX || minimumPoolMax)
+const databasePoolMax =
+  Number.isFinite(configuredPoolMax) && configuredPoolMax > 0
+    ? Math.max(Math.floor(configuredPoolMax), minimumPoolMax)
+    : minimumPoolMax
+
+const getDatabaseURL = (): string => {
+  const databaseURL = process.env.DATABASE_URL || ''
+
+  if (!usesSupabaseTransactionPooler) return databaseURL
+
+  try {
+    const url = new URL(databaseURL)
+
+    if (url.hostname.endsWith('.pooler.supabase.com') && url.port === '5432') {
+      url.port = '6543'
+    }
+
+    return url.toString()
+  } catch {
+    return databaseURL
+  }
+}
+
+const smtpPort = Number(process.env.SMTP_PORT || 587)
+const smtpConfigured = Boolean(
+  process.env.SMTP_HOST &&
+  process.env.SMTP_USER &&
+  process.env.SMTP_PASSWORD &&
+  process.env.SMTP_FROM_EMAIL,
+)
+const serverURL = getServerSideURL()
+const allowedOrigins = getAllowedOrigins()
 
 export default buildConfig({
   admin: {
@@ -40,9 +76,11 @@ export default buildConfig({
     user: Users.slug,
   },
   collections: [Users, Pages, Categories, CustomerComments, Media],
+  cors: allowedOrigins,
+  csrf: allowedOrigins,
   db: postgresAdapter({
     pool: {
-      connectionString: process.env.DATABASE_URL || '',
+      connectionString: getDatabaseURL(),
       max: databasePoolMax,
     },
     push: false,
@@ -82,11 +120,30 @@ export default buildConfig({
       ]
     },
   }),
-  //email: nodemailerAdapter(),
+  email: smtpConfigured
+    ? nodemailerAdapter({
+        defaultFromAddress: process.env.SMTP_FROM_EMAIL || '',
+        defaultFromName: process.env.SMTP_FROM_NAME || 'Hamzique Classic',
+        // Avoid an SMTP round-trip during every serverless cold start. Delivery errors are
+        // still reported by sendEmail and handled by the caller.
+        skipVerify: true,
+        transportOptions: {
+          auth: {
+            pass: process.env.SMTP_PASSWORD || '',
+            user: process.env.SMTP_USER || '',
+          },
+          host: process.env.SMTP_HOST || 'smtp-relay.brevo.com',
+          port: Number.isFinite(smtpPort) ? smtpPort : 587,
+          requireTLS: process.env.SMTP_REQUIRE_TLS !== 'false',
+          secure: process.env.SMTP_SECURE === 'true',
+        },
+      })
+    : undefined,
   endpoints: [],
   globals: [Header, Footer],
   plugins,
   secret: process.env.PAYLOAD_SECRET || '',
+  serverURL,
   typescript: {
     outputFile: path.resolve(dirname, 'payload-types.ts'),
   },
